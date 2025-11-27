@@ -60,3 +60,8 @@ Thumbs.db
 **/secrets.py
 **/credentials.py
 connection_string.txt
+
+# Claude Code (local settings)
+CLAUDE.md
+.claude/settings.local.json
+.mcp.json
