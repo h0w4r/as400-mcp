@@ -61,9 +61,11 @@ pip install -e .
 
 ## Claude Code設定
 
-`~/.claude.json`（または `~/.claude/claude_code_config.json`）に以下を追加してください。
+プロジェクトルートに `.mcp.json` ファイルを作成してください。
 
-### Windows
+接続情報（パスワード等）を含む場合は `.gitignore` に `.mcp.json` を追加することを推奨します。
+
+### Windows（.mcp.json）
 
 ```json
 {
@@ -79,7 +81,7 @@ pip install -e .
 }
 ```
 
-### Linux/macOS
+### Linux/macOS（.mcp.json）
 
 ```json
 {
@@ -94,6 +96,8 @@ pip install -e .
   }
 }
 ```
+
+設定後、Claude Codeを再起動して `/mcp` コマンドでas400サーバーが表示されることを確認してください。
 
 ### 接続文字列のオプション
 
