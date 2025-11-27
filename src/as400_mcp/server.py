@@ -155,11 +155,10 @@ def list_libraries(pattern: str = "%", include_system: bool = False) -> list[dic
 
         # QSYS2.SYSSCHEMAS: ライブラリ（スキーマ）のカタログビュー
         # 注意: SCHEMA_TYPEは新しいIBM iバージョンのみ存在
-        # 互換性のため、システムライブラリはライブラリ名パターンで除外
         sql = """
             SELECT
-                SYSTEM_SCHEMA_NAME AS LIBRARY_NAME,
-                COALESCE(SCHEMA_TEXT, '') AS LIBRARY_TEXT
+                SYSTEM_SCHEMA_NAME AS LIBRARY_NAME,       -- ライブラリ名
+                COALESCE(SCHEMA_TEXT, '') AS LIBRARY_TEXT -- 説明テキスト
             FROM
                 QSYS2.SYSSCHEMAS
             WHERE
@@ -196,9 +195,9 @@ def _list_tables_internal(library: str, pattern: str = "%", table_type: str = "A
         # 注意: NUMBER_ROWSは新しいIBM iバージョンのみ存在するため除外
         sql = """
             SELECT
-                SYSTEM_TABLE_NAME AS TABLE_NAME,
-                COALESCE(TABLE_TEXT, '') AS TABLE_TEXT,
-                TABLE_TYPE
+                SYSTEM_TABLE_NAME AS TABLE_NAME,        -- テーブル名
+                COALESCE(TABLE_TEXT, '') AS TABLE_TEXT, -- 説明テキスト
+                TABLE_TYPE                               -- P/L/V
             FROM
                 QSYS2.SYSTABLES
             WHERE
@@ -257,15 +256,15 @@ def _get_columns_internal(library: str, table: str) -> list[dict]:
         # CCSID: 文字コード（日本語は5035や1399等）
         sql = """
             SELECT
-                c.SYSTEM_COLUMN_NAME AS COLUMN_NAME,
-                COALESCE(c.COLUMN_TEXT, '') AS COLUMN_TEXT,
-                c.DATA_TYPE,
-                c.LENGTH,
-                COALESCE(c.NUMERIC_SCALE, 0) AS DECIMAL_PLACES,
-                c.IS_NULLABLE,
-                c.ORDINAL_POSITION,
-                COALESCE(c.COLUMN_DEFAULT, '') AS DEFAULT_VALUE,
-                c.CCSID
+                c.SYSTEM_COLUMN_NAME AS COLUMN_NAME,             -- カラム名
+                COALESCE(c.COLUMN_TEXT, '') AS COLUMN_TEXT,      -- 日本語ラベル
+                c.DATA_TYPE,                                      -- データ型
+                c.LENGTH,                                         -- 長さ
+                COALESCE(c.NUMERIC_SCALE, 0) AS DECIMAL_PLACES,  -- 小数桁数
+                c.IS_NULLABLE,                                    -- NULL許可
+                c.ORDINAL_POSITION,                               -- 順序位置
+                COALESCE(c.COLUMN_DEFAULT, '') AS DEFAULT_VALUE, -- デフォルト値
+                c.CCSID                                           -- 文字コード
             FROM
                 QSYS2.SYSCOLUMNS c
             WHERE
@@ -335,9 +334,9 @@ def list_sources(library: str, source_file: str = "QCLSRC", pattern: str = "%") 
         # 注意: NUMBER_ROWS, LAST_SOURCE_UPDATEは新しいIBM iバージョンのみ存在するため除外
         sql = """
             SELECT
-                SYSTEM_TABLE_MEMBER AS MEMBER_NAME,
-                SOURCE_TYPE,
-                COALESCE(PARTITION_TEXT, '') AS MEMBER_TEXT
+                SYSTEM_TABLE_MEMBER AS MEMBER_NAME,       -- メンバー名
+                SOURCE_TYPE,                               -- ソースタイプ
+                COALESCE(PARTITION_TEXT, '') AS MEMBER_TEXT -- 説明テキスト
             FROM
                 QSYS2.SYSPARTITIONSTAT
             WHERE
@@ -369,9 +368,9 @@ def _get_source_internal(library: str, source_file: str, member: str) -> dict:
         # Step 1: メンバーのメタ情報を取得
         meta_sql = """
             SELECT
-                SYSTEM_TABLE_MEMBER AS MEMBER_NAME,
-                SOURCE_TYPE,
-                COALESCE(PARTITION_TEXT, '') AS MEMBER_TEXT
+                SYSTEM_TABLE_MEMBER AS MEMBER_NAME,        -- メンバー名
+                SOURCE_TYPE,                                -- ソースタイプ
+                COALESCE(PARTITION_TEXT, '') AS MEMBER_TEXT -- 説明テキスト
             FROM
                 QSYS2.SYSPARTITIONSTAT
             WHERE
@@ -402,7 +401,9 @@ def _get_source_internal(library: str, source_file: str, member: str) -> dict:
 
         source_sql = f"""
             SELECT
-                SRCSEQ, SRCDAT, SRCDTA
+                SRCSEQ,  -- 行番号（小数点付き）
+                SRCDAT,  -- 更新日（YYMMDD形式）
+                SRCDTA   -- ソース行
             FROM
                 {alias_name}
             ORDER BY
@@ -542,9 +543,9 @@ def _get_table_info_internal(library: str, table: str) -> dict:
         # 注意: NUMBER_ROWS, DATA_SIZEは新しいIBM iバージョンのみ存在するため除外
         table_sql = """
             SELECT
-                SYSTEM_TABLE_NAME AS TABLE_NAME,
-                COALESCE(TABLE_TEXT, '') AS TABLE_TEXT,
-                TABLE_TYPE
+                SYSTEM_TABLE_NAME AS TABLE_NAME,        -- テーブル名
+                COALESCE(TABLE_TEXT, '') AS TABLE_TEXT, -- 説明テキスト
+                TABLE_TYPE                               -- P/L/V
             FROM
                 QSYS2.SYSTABLES
             WHERE
@@ -568,8 +569,8 @@ def _get_table_info_internal(library: str, table: str) -> dict:
         # QSYS2.SYSKEYCST: 主キー制約のカラム情報
         key_sql = """
             SELECT
-                COLUMN_NAME,
-                ORDINAL_POSITION
+                COLUMN_NAME,       -- キーカラム名
+                ORDINAL_POSITION   -- キー順序
             FROM
                 QSYS2.SYSKEYCST
             WHERE
@@ -586,9 +587,9 @@ def _get_table_info_internal(library: str, table: str) -> dict:
         # QSYS2.SYSINDEXES: インデックス（論理ファイル）の情報
         index_sql = """
             SELECT
-                SYSTEM_INDEX_NAME AS INDEX_NAME,
-                COALESCE(INDEX_TEXT, '') AS INDEX_TEXT,
-                IS_UNIQUE
+                SYSTEM_INDEX_NAME AS INDEX_NAME,         -- インデックス名
+                COALESCE(INDEX_TEXT, '') AS INDEX_TEXT,  -- 説明テキスト
+                IS_UNIQUE                                 -- ユニーク制約
             FROM
                 QSYS2.SYSINDEXES
             WHERE
@@ -644,20 +645,22 @@ def get_system_info() -> dict:
             SELECT
                 SYSTEM_VALUE_NAME,
                 COALESCE(CURRENT_CHARACTER_VALUE, CAST(CURRENT_NUMERIC_VALUE AS VARCHAR(50)))
-            FROM QSYS2.SYSTEM_VALUE_INFO
-            WHERE SYSTEM_VALUE_NAME IN (
-                'QSRLNBR',    -- シリアル番号
-                'QMODEL',     -- モデル
-                'QLANGID',    -- 言語ID（JPN等）
-                'QDATFMT',    -- 日付形式（YMD, MDY等）
-                'QDATSEP',    -- 日付区切り文字
-                'QTIMFMT',    -- 時刻形式（HMS等）
-                'QTIMSEP',    -- 時刻区切り文字
-                'QDECFMT',    -- 小数点形式
-                'QCURSYM',    -- 通貨記号
-                'QSYSLIBL',   -- システムライブラリリスト
-                'QUSRLIBL'    -- ユーザーライブラリリスト
-            )
+            FROM
+                QSYS2.SYSTEM_VALUE_INFO
+            WHERE
+                SYSTEM_VALUE_NAME IN (
+                    'QSRLNBR',    -- シリアル番号
+                    'QMODEL',     -- モデル
+                    'QLANGID',    -- 言語ID（JPN等）
+                    'QDATFMT',    -- 日付形式（YMD, MDY等）
+                    'QDATSEP',    -- 日付区切り文字
+                    'QTIMFMT',    -- 時刻形式（HMS等）
+                    'QTIMSEP',    -- 時刻区切り文字
+                    'QDECFMT',    -- 小数点形式
+                    'QCURSYM',    -- 通貨記号
+                    'QSYSLIBL',   -- システムライブラリリスト
+                    'QUSRLIBL'    -- ユーザーライブラリリスト
+                )
         """
 
         try:
@@ -697,9 +700,9 @@ def get_system_info() -> dict:
         # Step 2: IBMi バージョン情報を取得
         ver_sql = """
             SELECT
-                OS_NAME,
-                OS_VERSION,
-                OS_RELEASE
+                OS_NAME,      -- OS名（IBM i等）
+                OS_VERSION,   -- バージョン番号
+                OS_RELEASE    -- リリース番号
             FROM
                 SYSIBMADM.ENV_SYS_INFO
             FETCH FIRST 1 ROW ONLY
@@ -721,8 +724,8 @@ def get_system_info() -> dict:
         # Step 3: SQL機能レベルを取得（RPG/SQLプログラム作成時に重要）
         sql_sql = """
             SELECT
-                SQL_STANDARD_VERSION,
-                SQL_PATH
+                SQL_STANDARD_VERSION,  -- SQL標準バージョン
+                SQL_PATH               -- SQLパス
             FROM
                 QSYS2.SQL_SIZING
             FETCH FIRST 1 ROW ONLY
@@ -746,7 +749,7 @@ def get_system_info() -> dict:
         try:
             cursor.execute("""
                 SELECT
-                    CURRENT_NUMERIC_VALUE
+                    CURRENT_NUMERIC_VALUE  -- システムCCSID
                 FROM
                     QSYS2.SYSTEM_VALUE_INFO
                 WHERE
@@ -762,7 +765,7 @@ def get_system_info() -> dict:
         try:
             cursor.execute("""
                 SELECT
-                    JOB_CCSID
+                    JOB_CCSID  -- ジョブCCSID
                 FROM
                     QSYS2.JOB_INFO
                 WHERE
@@ -780,9 +783,9 @@ def get_system_info() -> dict:
         # Step 5: 接続ユーザー情報
         user_sql = """
             SELECT
-                CURRENT_USER,
-                USER,
-                CURRENT_SCHEMA
+                CURRENT_USER,    -- 認証ユーザー
+                USER,            -- 現在のユーザー
+                CURRENT_SCHEMA   -- 現在のスキーマ
             FROM
                 SYSIBM.SYSDUMMY1
         """
@@ -799,18 +802,18 @@ def get_system_info() -> dict:
         except Exception:
             pass
 
-        # Step 5: 利用可能なコンパイラ/言語環境（インストール済み製品）
+        # Step 6: 利用可能なコンパイラ/言語環境（インストール済み製品）
         compiler_sql = """
             SELECT
-                PRODUCT_ID,
-                PRODUCT_OPTION,
-                PRODUCT_DESCRIPTION_TEXT
+                PRODUCT_ID,              -- 製品ID
+                PRODUCT_OPTION,          -- オプション番号
+                PRODUCT_DESCRIPTION_TEXT -- 製品説明
             FROM
                 QSYS2.SOFTWARE_PRODUCT_INFO
             WHERE
                 PRODUCT_ID IN (
-                    '5770WDS',   -- Rational Development Studio (ILE RPG, COBOL, C/C++)
-                    '5770SS1'    -- IBM i Operating System
+                    '5770WDS',  -- Rational Development Studio (ILE RPG, COBOL, C/C++)
+                    '5770SS1'   -- IBM i Operating System
                 )
                 AND SYMBOLIC_LOAD_STATE = '*INSTALLED'
             ORDER BY
@@ -864,15 +867,15 @@ def list_programs(library: str, pattern: str = "%", program_type: str = "ALL") -
         # OBJATTRIBUTE: RPG, RPGLE, CLP, CLLE, CBL, CBLLE 等
         sql = """
             SELECT
-                OBJNAME AS PROGRAM_NAME,
-                COALESCE(OBJATTRIBUTE, '') AS ATTRIBUTE,
-                COALESCE(OBJTEXT, '') AS PROGRAM_TEXT,
-                OBJCREATED AS CREATED,
-                CHANGE_TIMESTAMP AS CHANGED,
-                OBJSIZE AS PROGRAM_SIZE,
-                COALESCE(SOURCE_FILE, '') AS SOURCE_FILE,
-                COALESCE(SOURCE_LIBRARY, '') AS SOURCE_LIBRARY,
-                COALESCE(SOURCE_MEMBER, '') AS SOURCE_MEMBER
+                OBJNAME AS PROGRAM_NAME,                      -- プログラム名
+                COALESCE(OBJATTRIBUTE, '') AS ATTRIBUTE,      -- 言語属性
+                COALESCE(OBJTEXT, '') AS PROGRAM_TEXT,        -- 説明テキスト
+                OBJCREATED AS CREATED,                        -- 作成日時
+                CHANGE_TIMESTAMP AS CHANGED,                  -- 変更日時
+                OBJSIZE AS PROGRAM_SIZE,                      -- サイズ
+                COALESCE(SOURCE_FILE, '') AS SOURCE_FILE,     -- ソースファイル
+                COALESCE(SOURCE_LIBRARY, '') AS SOURCE_LIBRARY, -- ソースライブラリ
+                COALESCE(SOURCE_MEMBER, '') AS SOURCE_MEMBER  -- ソースメンバー
             FROM
                 TABLE(QSYS2.OBJECT_STATISTICS(?, '*PGM'))
             WHERE
@@ -1013,10 +1016,10 @@ def get_program_references(library: str, program: str) -> dict:
         # Step 1: 参照ファイル一覧を取得（IBM i 7.4+）
         file_sql = """
             SELECT
-                SYSTEM_TABLE_SCHEMA AS FILE_LIBRARY,
-                SYSTEM_TABLE_NAME AS FILE_NAME,
-                USAGE,
-                COALESCE(t.TABLE_TEXT, '') AS FILE_TEXT
+                SYSTEM_TABLE_SCHEMA AS FILE_LIBRARY,     -- ファイルライブラリ
+                SYSTEM_TABLE_NAME AS FILE_NAME,          -- ファイル名
+                USAGE,                                    -- 使用方法(I/O/U)
+                COALESCE(t.TABLE_TEXT, '') AS FILE_TEXT  -- ファイル説明
             FROM
                 QSYS2.PROGRAM_FILE_REFERENCES r
                 LEFT JOIN QSYS2.SYSTABLES t
@@ -1049,12 +1052,13 @@ def get_program_references(library: str, program: str) -> dict:
         if not use_source_analysis:
             call_sql = """
                 SELECT
-                    BOUND_MODULE_LIBRARY,
-                    BOUND_MODULE
+                    BOUND_MODULE_LIBRARY,  -- モジュールライブラリ
+                    BOUND_MODULE           -- モジュール名
                 FROM
                     QSYS2.PROGRAM_BOUND_MODULE_INFO
                 WHERE
-                    PROGRAM_LIBRARY = ? AND PROGRAM_NAME = ?
+                    PROGRAM_LIBRARY = ?
+                    AND PROGRAM_NAME = ?
             """
             try:
                 cursor.execute(call_sql, (library.upper(), program.upper()))
@@ -1073,10 +1077,10 @@ def get_program_references(library: str, program: str) -> dict:
             # プログラムのソース情報を取得
             src_sql = """
                 SELECT
-                    SOURCE_FILE,
-                    SOURCE_LIBRARY,
-                    SOURCE_MEMBER,
-                    OBJATTRIBUTE
+                    SOURCE_FILE,     -- ソースファイル
+                    SOURCE_LIBRARY,  -- ソースライブラリ
+                    SOURCE_MEMBER,   -- ソースメンバー
+                    OBJATTRIBUTE     -- 言語属性
                 FROM
                     TABLE(QSYS2.OBJECT_STATISTICS(?, '*PGM'))
                 WHERE
@@ -1139,12 +1143,12 @@ def list_data_areas(library: str, pattern: str = "%") -> list[dict]:
         # カラム名はIBM iバージョンによって異なる場合がある
         sql = """
             SELECT
-                DATA_AREA_NAME,
-                DATA_AREA_TYPE,
-                LENGTH,
-                COALESCE(DECIMAL_POSITIONS, 0) AS DECIMAL_POSITIONS,
-                COALESCE(DATA_AREA_VALUE, '') AS DATA_VALUE,
-                COALESCE(TEXT_DESCRIPTION, '') AS DESCRIPTION
+                DATA_AREA_NAME,                               -- データエリア名
+                DATA_AREA_TYPE,                               -- タイプ(*CHAR/*DEC)
+                LENGTH,                                       -- 長さ
+                COALESCE(DECIMAL_POSITIONS, 0) AS DECIMAL_POSITIONS, -- 小数桁数
+                COALESCE(DATA_AREA_VALUE, '') AS DATA_VALUE,  -- 現在の値
+                COALESCE(TEXT_DESCRIPTION, '') AS DESCRIPTION -- 説明テキスト
             FROM
                 QSYS2.DATA_AREA_INFO
             WHERE
@@ -1489,6 +1493,11 @@ def main():
         "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;"
         "UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1",
     )
+
+    # 開発系ツールを登録
+    from as400_mcp.development import register_development_tools
+
+    register_development_tools(mcp, get_connection)
 
     # FastMCPサーバーを起動（stdin/stdout経由でMCPプロトコル通信）
     mcp.run()
