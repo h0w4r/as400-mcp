@@ -1,7 +1,7 @@
 """Tests for AS400 MCP Server"""
 
+
 import pytest
-from unittest.mock import MagicMock
 
 
 class TestListTables:
@@ -171,7 +171,6 @@ class TestPrompts:
 
     def test_create_crud_program_prompt(self, mock_odbc, sample_columns):
         """Test CRUD program prompt generation"""
-        from as400_mcp.server import create_crud_program, get_table_info
 
         mock_conn, mock_cursor = mock_odbc
 

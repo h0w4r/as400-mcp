@@ -18,13 +18,13 @@ Claude CodeからAS400/IBM iシステムへのアクセスを提供します。
     - AS400_CONNECTION_STRING 環境変数
 
 使用例:
-    $ export AS400_CONNECTION_STRING="DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1"
+    $ export AS400_CONNECTION_STRING="DRIVER={IBM i Access ODBC Driver};..."
     $ python -m as400_mcp.server
 """
 
+
 import pyodbc
-from typing import Optional
-from fastmcp import FastMCP, Context
+from fastmcp import FastMCP
 
 # MCPサーバーの初期化
 mcp = FastMCP(
@@ -145,18 +145,18 @@ def list_libraries(
 ) -> list[dict]:
     """
     ライブラリ一覧を取得します。
-    
+
     Args:
         pattern: ライブラリ名のパターン（%でワイルドカード）
         include_system: システムライブラリを含めるか
-    
+
     Returns:
         ライブラリ一覧（名前、ラベル、タイプ）
     """
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        
+
         # QSYS2.SYSSCHEMAS: ライブラリ（スキーマ）のカタログビュー
         # 注意: SCHEMA_TYPEは新しいIBM iバージョンのみ存在
         # 互換性のため、システムライブラリはライブラリ名パターンで除外
@@ -173,11 +173,11 @@ def list_libraries(
         # システムライブラリ（Q*で始まるライブラリ）を除外する場合
         if not include_system:
             sql += " AND SYSTEM_SCHEMA_NAME NOT LIKE 'Q%'"
-        
+
         sql += " ORDER BY SYSTEM_SCHEMA_NAME"
-        
+
         cursor.execute(sql, (pattern,))
-        
+
         # 結果をdict形式に変換して返す
         columns = [desc[0] for desc in cursor.description]
         results = []
@@ -365,12 +365,12 @@ def list_sources(
         """
 
         cursor.execute(sql, (library.upper(), source_file.upper(), pattern))
-        
+
         columns = [desc[0] for desc in cursor.description]
         results = []
         for row in cursor.fetchall():
             results.append(strip_values(dict(zip(columns, row))))
-        
+
         return results
     finally:
         conn.close()
@@ -409,7 +409,13 @@ def _get_source_internal(library: str, source_file: str, member: str) -> dict:
         # ソースファイルは特殊な構造: SRCSEQ(行番号), SRCDAT(更新日), SRCDTA(ソース行)
         # メンバー指定にはALIASを使用（古いIBM iでの互換性のため）
         alias_name = f"QTEMP.SRC_{member.upper()}"
-        cursor.execute(f"CREATE OR REPLACE ALIAS {alias_name} FOR {library.upper()}.{source_file.upper()} ({member.upper()})")
+        lib_upper = library.upper()
+        src_upper = source_file.upper()
+        mbr_upper = member.upper()
+        cursor.execute(
+            f"CREATE OR REPLACE ALIAS {alias_name} "
+            f"FOR {lib_upper}.{src_upper} ({mbr_upper})"
+        )
 
         source_sql = f"""
             SELECT
@@ -451,7 +457,7 @@ def get_source(
 
     Args:
         library: ライブラリ名
-        source_file: ソースファイル名（QCLSRC=CL, QRPGSRC=RPG, QRPGLESRC=RPGLE, QCBLSRC=COBOL, QDDSSRC=DDS）
+        source_file: ソースファイル名（QCLSRC, QRPGSRC, QRPGLESRC, QCBLSRC, QDDSSRC）
         member: メンバー名
 
     Returns:
@@ -731,7 +737,8 @@ def get_system_info() -> dict:
                 OS_NAME,
                 OS_VERSION,
                 OS_RELEASE
-            FROM SYSIBMADM.ENV_SYS_INFO
+            FROM
+                SYSIBMADM.ENV_SYS_INFO
             FETCH FIRST 1 ROW ONLY
         """
 
@@ -753,7 +760,8 @@ def get_system_info() -> dict:
             SELECT
                 SQL_STANDARD_VERSION,
                 SQL_PATH
-            FROM QSYS2.SQL_SIZING
+            FROM
+                QSYS2.SQL_SIZING
             FETCH FIRST 1 ROW ONLY
         """
 
@@ -774,9 +782,12 @@ def get_system_info() -> dict:
         # システムデフォルトCCSID（SYSTEM_VALUE_INFOは7.1+で使用可能）
         try:
             cursor.execute("""
-                SELECT CURRENT_NUMERIC_VALUE
-                FROM QSYS2.SYSTEM_VALUE_INFO
-                WHERE SYSTEM_VALUE_NAME = 'QCCSID'
+                SELECT
+                    CURRENT_NUMERIC_VALUE
+                FROM
+                    QSYS2.SYSTEM_VALUE_INFO
+                WHERE
+                    SYSTEM_VALUE_NAME = 'QCCSID'
             """)
             row = cursor.fetchone()
             if row:
@@ -787,9 +798,12 @@ def get_system_info() -> dict:
         # ジョブCCSID（JOB_INFOは7.4+のみ）
         try:
             cursor.execute("""
-                SELECT JOB_CCSID
-                FROM QSYS2.JOB_INFO
-                WHERE JOB_NAME = '*'
+                SELECT
+                    JOB_CCSID
+                FROM
+                    QSYS2.JOB_INFO
+                WHERE
+                    JOB_NAME = '*'
             """)
             row = cursor.fetchone()
             if row:
@@ -806,7 +820,8 @@ def get_system_info() -> dict:
                 CURRENT_USER,
                 USER,
                 CURRENT_SCHEMA
-            FROM SYSIBM.SYSDUMMY1
+            FROM
+                SYSIBM.SYSDUMMY1
         """
 
         try:
@@ -827,13 +842,16 @@ def get_system_info() -> dict:
                 PRODUCT_ID,
                 PRODUCT_OPTION,
                 PRODUCT_DESCRIPTION_TEXT
-            FROM QSYS2.SOFTWARE_PRODUCT_INFO
-            WHERE PRODUCT_ID IN (
-                '5770WDS',   -- Rational Development Studio (ILE RPG, COBOL, C/C++)
-                '5770SS1'    -- IBM i Operating System
-            )
-              AND SYMBOLIC_LOAD_STATE = '*INSTALLED'
-            ORDER BY PRODUCT_ID, PRODUCT_OPTION
+            FROM
+                QSYS2.SOFTWARE_PRODUCT_INFO
+            WHERE
+                PRODUCT_ID IN (
+                    '5770WDS',   -- Rational Development Studio (ILE RPG, COBOL, C/C++)
+                    '5770SS1'    -- IBM i Operating System
+                )
+                AND SYMBOLIC_LOAD_STATE = '*INSTALLED'
+            ORDER BY
+                PRODUCT_ID, PRODUCT_OPTION
         """
 
         try:
@@ -882,7 +900,7 @@ def list_programs(
 
         # QSYS2.OBJECT_STATISTICS: オブジェクト情報（IBM i 7.3以降で使用可能）
         # OBJATTRIBUTE: RPG, RPGLE, CLP, CLLE, CBL, CBLLE 等
-        sql = f"""
+        sql = """
             SELECT
                 OBJNAME AS PROGRAM_NAME,
                 COALESCE(OBJATTRIBUTE, '') AS ATTRIBUTE,
@@ -893,8 +911,10 @@ def list_programs(
                 COALESCE(SOURCE_FILE, '') AS SOURCE_FILE,
                 COALESCE(SOURCE_LIBRARY, '') AS SOURCE_LIBRARY,
                 COALESCE(SOURCE_MEMBER, '') AS SOURCE_MEMBER
-            FROM TABLE(QSYS2.OBJECT_STATISTICS(?, '*PGM'))
-            WHERE OBJNAME LIKE ?
+            FROM
+                TABLE(QSYS2.OBJECT_STATISTICS(?, '*PGM'))
+            WHERE
+                OBJNAME LIKE ?
         """
 
         params = [library.upper(), pattern]
@@ -972,7 +992,14 @@ def _parse_source_references(source_text: str, source_type: str) -> dict:
                 file_name = line[6:16].strip()
                 if file_name and not file_name.startswith('*'):
                     file_type = line[16:17] if len(line) > 16 else ''
-                    usage = 'INPUT' if file_type == 'I' else 'OUTPUT' if file_type == 'O' else 'UPDATE' if file_type == 'U' else 'UNKNOWN'
+                    if file_type == 'I':
+                        usage = 'INPUT'
+                    elif file_type == 'O':
+                        usage = 'OUTPUT'
+                    elif file_type == 'U':
+                        usage = 'UPDATE'
+                    else:
+                        usage = 'UNKNOWN'
                     files.append({"file": file_name, "library": "*LIBL", "usage": usage})
 
             # 固定形式RPG: C仕様書のCALL
@@ -1030,13 +1057,16 @@ def get_program_references(
                 SYSTEM_TABLE_NAME AS FILE_NAME,
                 USAGE,
                 COALESCE(t.TABLE_TEXT, '') AS FILE_TEXT
-            FROM QSYS2.PROGRAM_FILE_REFERENCES r
-            LEFT JOIN QSYS2.SYSTABLES t
-              ON r.SYSTEM_TABLE_SCHEMA = t.SYSTEM_TABLE_SCHEMA
-              AND r.SYSTEM_TABLE_NAME = t.SYSTEM_TABLE_NAME
-            WHERE r.PROGRAM_LIBRARY = ?
-              AND r.PROGRAM_NAME = ?
-            ORDER BY r.SYSTEM_TABLE_NAME
+            FROM
+                QSYS2.PROGRAM_FILE_REFERENCES r
+                LEFT JOIN QSYS2.SYSTABLES t
+                    ON r.SYSTEM_TABLE_SCHEMA = t.SYSTEM_TABLE_SCHEMA
+                    AND r.SYSTEM_TABLE_NAME = t.SYSTEM_TABLE_NAME
+            WHERE
+                r.PROGRAM_LIBRARY = ?
+                AND r.PROGRAM_NAME = ?
+            ORDER BY
+                r.SYSTEM_TABLE_NAME
         """
 
         use_source_analysis = False
@@ -1056,9 +1086,13 @@ def get_program_references(
         # Step 2: バインドモジュール取得（IBM i 7.4+）
         if not use_source_analysis:
             call_sql = """
-                SELECT BOUND_MODULE_LIBRARY, BOUND_MODULE
-                FROM QSYS2.PROGRAM_BOUND_MODULE_INFO
-                WHERE PROGRAM_LIBRARY = ? AND PROGRAM_NAME = ?
+                SELECT
+                    BOUND_MODULE_LIBRARY,
+                    BOUND_MODULE
+                FROM
+                    QSYS2.PROGRAM_BOUND_MODULE_INFO
+                WHERE
+                    PROGRAM_LIBRARY = ? AND PROGRAM_NAME = ?
             """
             try:
                 cursor.execute(call_sql, (library.upper(), program.upper()))
@@ -1074,9 +1108,15 @@ def get_program_references(
         if use_source_analysis:
             # プログラムのソース情報を取得
             src_sql = """
-                SELECT SOURCE_FILE, SOURCE_LIBRARY, SOURCE_MEMBER, OBJATTRIBUTE
-                FROM TABLE(QSYS2.OBJECT_STATISTICS(?, '*PGM'))
-                WHERE OBJNAME = ?
+                SELECT
+                    SOURCE_FILE,
+                    SOURCE_LIBRARY,
+                    SOURCE_MEMBER,
+                    OBJATTRIBUTE
+                FROM
+                    TABLE(QSYS2.OBJECT_STATISTICS(?, '*PGM'))
+                WHERE
+                    OBJNAME = ?
             """
             cursor.execute(src_sql, (library.upper(), program.upper()))
             src_row = cursor.fetchone()
@@ -1100,7 +1140,8 @@ def get_program_references(
                         "method": "source_analysis",
                         "source_file": f"{src_lib}/{src_file}({src_member})",
                         "source_type": src_type,
-                        "note": "Extracted from source code. May not include runtime-resolved references."
+                        "note": "Extracted from source code. "
+                                "May not include runtime-resolved references."
                     }
                 else:
                     result["error"] = f"Could not retrieve source: {source_data['error']}"
@@ -1143,10 +1184,13 @@ def list_data_areas(
                 COALESCE(DECIMAL_POSITIONS, 0) AS DECIMAL_POSITIONS,
                 COALESCE(DATA_AREA_VALUE, '') AS DATA_VALUE,
                 COALESCE(TEXT_DESCRIPTION, '') AS DESCRIPTION
-            FROM QSYS2.DATA_AREA_INFO
-            WHERE DATA_AREA_LIBRARY = ?
-              AND DATA_AREA_NAME LIKE ?
-            ORDER BY DATA_AREA_NAME
+            FROM
+                QSYS2.DATA_AREA_INFO
+            WHERE
+                DATA_AREA_LIBRARY = ?
+                AND DATA_AREA_NAME LIKE ?
+            ORDER BY
+                DATA_AREA_NAME
         """
 
         cursor.execute(sql, (library.upper(), pattern))
@@ -1331,10 +1375,10 @@ def create_crud_program(
     """
     # テーブル情報を取得
     info = _get_table_info_internal(library, table)
-    
+
     if "error" in info:
         return f"Error: {info['error']}"
-    
+
     columns_desc = []
     for col in info["columns"]:
         key_mark = "[PK] " if col["COLUMN_NAME"] in info["primary_key"] else ""
@@ -1342,7 +1386,7 @@ def create_crud_program(
             f"  - {key_mark}{col['COLUMN_NAME']}: {col['COLUMN_TEXT']} "
             f"({col['DATA_TYPE']}({col['LENGTH']}))"
         )
-    
+
     return f"""以下のテーブル情報を元に、{program_type}でCRUD画面プログラムを作成してください。
 
 ## テーブル情報
@@ -1384,7 +1428,7 @@ def analyze_source(
 ) -> str:
     """
     ソースコード分析プロンプト
-    
+
     Args:
         library: ライブラリ名
         source_file: ソースファイル名
@@ -1429,18 +1473,18 @@ def generate_cl_for_batch(
 ) -> str:
     """
     バッチ処理用CLプログラム作成プロンプト
-    
+
     Args:
         library: ライブラリ名
         description: 処理内容の説明
     """
     # ライブラリ内のテーブル一覧を取得
     tables = _list_tables_internal(library)
-    
+
     table_list = []
     for t in tables:
         table_list.append(f"  - {t['TABLE_NAME']}: {t['TABLE_TEXT']}")
-    
+
     return f"""以下の要件でバッチ処理用のCLプログラムを作成してください。
 
 ## 処理概要
@@ -1450,7 +1494,7 @@ def generate_cl_for_batch(
 {library.upper()}
 
 ## 利用可能なテーブル
-{chr(10).join(table_list[:20])}  
+{chr(10).join(table_list[:20])}
 {'...(他' + str(len(tables) - 20) + 'テーブル)' if len(tables) > 20 else ''}
 
 ## CLプログラム要件
@@ -1478,6 +1522,7 @@ def main():
     実際の接続時にエラーとなる。
     """
     import os
+
     from dotenv import load_dotenv
 
     # .envファイルがあれば読み込む（環境変数が優先される）
@@ -1487,9 +1532,9 @@ def main():
     CONNECTION_STRING = os.environ.get(
         "AS400_CONNECTION_STRING",
         # デフォルト値（実際には環境変数での設定が必須）
-        # CCSID=1208: UTF-8で通信（日本語対応）
-        # EXTCOLINFO=1: 拡張カラム情報（COLUMN_TEXT等）を取得
-        "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1"
+        # CCSID=1208: UTF-8で通信, EXTCOLINFO=1: 拡張カラム情報
+        "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;"
+        "UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1"
     )
 
     # FastMCPサーバーを起動（stdin/stdout経由でMCPプロトコル通信）
