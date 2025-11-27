@@ -22,7 +22,6 @@ Claude CodeからAS400/IBM iシステムへのアクセスを提供します。
     $ python -m as400_mcp.server
 """
 
-
 import pyodbc
 from fastmcp import FastMCP
 
@@ -82,7 +81,7 @@ mcp = FastMCP(
 - ライブラリ名、ファイル名は大文字で指定（自動変換されます）
 - ODBCドライバーが必要（IBM i Access ODBC Driver）
 - `execute_sql` はSELECT文のみ実行可能（セキュリティのため）
-"""
+""",
 )
 
 # =============================================================================
@@ -129,8 +128,7 @@ def strip_values(row_dict: dict) -> dict:
         文字列値がstripされた辞書
     """
     return {
-        key: value.strip() if isinstance(value, str) else value
-        for key, value in row_dict.items()
+        key: value.strip() if isinstance(value, str) else value for key, value in row_dict.items()
     }
 
 
@@ -138,11 +136,9 @@ def strip_values(row_dict: dict) -> dict:
 # Tools - ライブラリ・テーブル情報系
 # =============================================================================
 
+
 @mcp.tool()
-def list_libraries(
-    pattern: str = "%",
-    include_system: bool = False
-) -> list[dict]:
+def list_libraries(pattern: str = "%", include_system: bool = False) -> list[dict]:
     """
     ライブラリ一覧を取得します。
 
@@ -189,11 +185,7 @@ def list_libraries(
         conn.close()
 
 
-def _list_tables_internal(
-    library: str,
-    pattern: str = "%",
-    table_type: str = "ALL"
-) -> list[dict]:
+def _list_tables_internal(library: str, pattern: str = "%", table_type: str = "ALL") -> list[dict]:
     """テーブル一覧を取得する内部関数（他のツールから呼び出し可能）。"""
     conn = get_connection()
     try:
@@ -207,9 +199,11 @@ def _list_tables_internal(
                 SYSTEM_TABLE_NAME AS TABLE_NAME,
                 COALESCE(TABLE_TEXT, '') AS TABLE_TEXT,
                 TABLE_TYPE
-            FROM QSYS2.SYSTABLES
-            WHERE SYSTEM_TABLE_SCHEMA = ?
-              AND SYSTEM_TABLE_NAME LIKE ?
+            FROM
+                QSYS2.SYSTABLES
+            WHERE
+                SYSTEM_TABLE_SCHEMA = ?
+                AND SYSTEM_TABLE_NAME LIKE ?
         """
 
         # library.upper(): AS400は大文字が標準なので変換
@@ -235,11 +229,7 @@ def _list_tables_internal(
 
 
 @mcp.tool()
-def list_tables(
-    library: str,
-    pattern: str = "%",
-    table_type: str = "ALL"
-) -> list[dict]:
+def list_tables(library: str, pattern: str = "%", table_type: str = "ALL") -> list[dict]:
     """
     指定ライブラリのテーブル（物理ファイル/論理ファイル）一覧を取得します。
 
@@ -298,10 +288,7 @@ def _get_columns_internal(library: str, table: str) -> list[dict]:
 
 
 @mcp.tool()
-def get_columns(
-    library: str,
-    table: str
-) -> list[dict]:
+def get_columns(library: str, table: str) -> list[dict]:
     """
     テーブルのカラム情報を取得します（ラベル付き）。
 
@@ -319,12 +306,9 @@ def get_columns(
 # Tools - ソースコード系
 # =============================================================================
 
+
 @mcp.tool()
-def list_sources(
-    library: str,
-    source_file: str = "QCLSRC",
-    pattern: str = "%"
-) -> list[dict]:
+def list_sources(library: str, source_file: str = "QCLSRC", pattern: str = "%") -> list[dict]:
     """
     ソースファイル内のメンバー一覧を取得します。
 
@@ -413,8 +397,7 @@ def _get_source_internal(library: str, source_file: str, member: str) -> dict:
         src_upper = source_file.upper()
         mbr_upper = member.upper()
         cursor.execute(
-            f"CREATE OR REPLACE ALIAS {alias_name} "
-            f"FOR {lib_upper}.{src_upper} ({mbr_upper})"
+            f"CREATE OR REPLACE ALIAS {alias_name} FOR {lib_upper}.{src_upper} ({mbr_upper})"
         )
 
         source_sql = f"""
@@ -431,27 +414,25 @@ def _get_source_internal(library: str, source_file: str, member: str) -> dict:
         # 各行を構造化して格納
         lines = []
         for row in cursor.fetchall():
-            lines.append({
-                "seq": float(row[0]) if row[0] else 0,      # 行番号（小数点付き）
-                "date": str(row[1]) if row[1] else "",      # 更新日（YYMMDD形式）
-                "text": row[2].strip() if row[2] else ""   # ソース行（トリム）
-            })
+            lines.append(
+                {
+                    "seq": float(row[0]) if row[0] else 0,  # 行番号（小数点付き）
+                    "date": str(row[1]) if row[1] else "",  # 更新日（YYMMDD形式）
+                    "text": row[2].strip() if row[2] else "",  # ソース行（トリム）
+                }
+            )
 
         return {
             "metadata": metadata,
             "source_lines": lines,
-            "source_text": "\n".join(line["text"] for line in lines)  # 全行を結合
+            "source_text": "\n".join(line["text"] for line in lines),  # 全行を結合
         }
     finally:
         conn.close()
 
 
 @mcp.tool()
-def get_source(
-    library: str,
-    source_file: str,
-    member: str
-) -> dict:
+def get_source(library: str, source_file: str, member: str) -> dict:
     """
     ソースコードを取得します。
 
@@ -470,14 +451,10 @@ def get_source(
 # Tools - データ取得系
 # =============================================================================
 
+
 @mcp.tool()
 def get_data(
-    library: str,
-    table: str,
-    columns: str = "",
-    where: str = "",
-    limit: int = 100,
-    offset: int = 0
+    library: str, table: str, columns: str = "", where: str = "", limit: int = 100, offset: int = 0
 ) -> dict:
     """
     テーブルデータを取得します（カラムラベル付き）。
@@ -532,10 +509,7 @@ def get_data(
             col_name = desc[0]
             if col_name == "RN__":
                 continue
-            result_columns.append({
-                "name": col_name,
-                "label": column_labels.get(col_name, "")
-            })
+            result_columns.append({"name": col_name, "label": column_labels.get(col_name, "")})
 
         # 行データを取得（RN__は除外）
         rows = []
@@ -553,11 +527,7 @@ def get_data(
                 col_idx += 1
             rows.append(row_dict)
 
-        return {
-            "columns": result_columns,
-            "rows": rows,
-            "row_count": len(rows)
-        }
+        return {"columns": result_columns, "rows": rows, "row_count": len(rows)}
     finally:
         conn.close()
 
@@ -630,21 +600,13 @@ def _get_table_info_internal(library: str, table: str) -> dict:
         index_cols = [desc[0] for desc in cursor.description]
         indexes = [strip_values(dict(zip(index_cols, row))) for row in cursor.fetchall()]
 
-        return {
-            "table": table_info,
-            "columns": columns,
-            "primary_key": keys,
-            "indexes": indexes
-        }
+        return {"table": table_info, "columns": columns, "primary_key": keys, "indexes": indexes}
     finally:
         conn.close()
 
 
 @mcp.tool()
-def get_table_info(
-    library: str,
-    table: str
-) -> dict:
+def get_table_info(library: str, table: str) -> dict:
     """
     テーブルの詳細情報を取得します（DDL生成用）。
 
@@ -661,6 +623,7 @@ def get_table_info(
 # =============================================================================
 # Tools - システム情報系
 # =============================================================================
+
 
 @mcp.tool()
 def get_system_info() -> dict:
@@ -703,28 +666,28 @@ def get_system_info() -> dict:
             for row in cursor.fetchall():
                 name = row[0].strip() if row[0] else ""
                 value = row[1].strip() if row[1] else ""
-                if name == 'QSRLNBR':
+                if name == "QSRLNBR":
                     os_info["serial_number"] = value
-                elif name == 'QMODEL':
+                elif name == "QMODEL":
                     os_info["model"] = value
-                elif name == 'QLANGID':
+                elif name == "QLANGID":
                     os_info["language_id"] = value
-                elif name == 'QDATFMT':
+                elif name == "QDATFMT":
                     os_info["date_format"] = value
-                elif name == 'QDATSEP':
+                elif name == "QDATSEP":
                     os_info["date_separator"] = value
-                elif name == 'QTIMFMT':
+                elif name == "QTIMFMT":
                     os_info["time_format"] = value
-                elif name == 'QTIMSEP':
+                elif name == "QTIMSEP":
                     os_info["time_separator"] = value
-                elif name == 'QDECFMT':
+                elif name == "QDECFMT":
                     os_info["decimal_format"] = value
-                elif name == 'QCURSYM':
+                elif name == "QCURSYM":
                     os_info["currency_symbol"] = value
-                elif name == 'QSYSLIBL':
+                elif name == "QSYSLIBL":
                     # スペース区切りのライブラリリストを配列に変換
                     os_info["system_library_list"] = value.split()
-                elif name == 'QUSRLIBL':
+                elif name == "QUSRLIBL":
                     os_info["user_library_list"] = value.split()
             if os_info:
                 result["system_info"] = os_info
@@ -749,7 +712,7 @@ def get_system_info() -> dict:
                 result["version"] = {
                     "os_name": row[0].strip() if row[0] else "",
                     "os_version": row[1].strip() if row[1] else "",
-                    "os_release": row[2].strip() if row[2] else ""
+                    "os_release": row[2].strip() if row[2] else "",
                 }
         except Exception:
             # 古いバージョンでは取得できない場合がある
@@ -771,7 +734,7 @@ def get_system_info() -> dict:
             if row:
                 result["sql_info"] = {
                     "sql_standard": row[0].strip() if row[0] else "",
-                    "sql_path": row[1].strip() if row[1] else ""
+                    "sql_path": row[1].strip() if row[1] else "",
                 }
         except Exception:
             pass
@@ -831,7 +794,7 @@ def get_system_info() -> dict:
                 result["connection_info"] = {
                     "current_user": row[0].strip() if row[0] else "",
                     "user": row[1].strip() if row[1] else "",
-                    "current_schema": row[2].strip() if row[2] else ""
+                    "current_schema": row[2].strip() if row[2] else "",
                 }
         except Exception:
             pass
@@ -858,11 +821,13 @@ def get_system_info() -> dict:
             cursor.execute(compiler_sql)
             compilers = []
             for row in cursor.fetchall():
-                compilers.append({
-                    "product_id": row[0].strip() if row[0] else "",
-                    "option": row[1].strip() if row[1] else "",
-                    "description": row[2].strip() if row[2] else ""
-                })
+                compilers.append(
+                    {
+                        "product_id": row[0].strip() if row[0] else "",
+                        "option": row[1].strip() if row[1] else "",
+                        "description": row[2].strip() if row[2] else "",
+                    }
+                )
             if compilers:
                 result["installed_compilers"] = compilers
         except Exception:
@@ -877,12 +842,9 @@ def get_system_info() -> dict:
 # Tools - プログラム・オブジェクト情報系
 # =============================================================================
 
+
 @mcp.tool()
-def list_programs(
-    library: str,
-    pattern: str = "%",
-    program_type: str = "ALL"
-) -> list[dict]:
+def list_programs(library: str, pattern: str = "%", program_type: str = "ALL") -> list[dict]:
     """
     ライブラリ内のプログラム一覧を取得します。
 
@@ -956,65 +918,66 @@ def _parse_source_references(source_text: str, source_type: str) -> dict:
         {"files": [...], "programs": [...]}
     """
     import re
+
     files = []
     programs = []
 
-    lines = source_text.upper().split('\n')
+    lines = source_text.upper().split("\n")
 
-    if source_type in ('CLP', 'CLLE'):
+    if source_type in ("CLP", "CLLE"):
         # CL: DCLF/DCLPF でファイル宣言、CALL でプログラム呼び出し
         for line in lines:
             # DCLF FILE(LIB/FILE) or DCLF FILE(FILE)
-            match = re.search(r'DCL[PF]*\s+FILE\(([^)]+)\)', line)
+            match = re.search(r"DCL[PF]*\s+FILE\(([^)]+)\)", line)
             if match:
                 file_ref = match.group(1).strip()
-                if '/' in file_ref:
-                    lib, fil = file_ref.split('/')
+                if "/" in file_ref:
+                    lib, fil = file_ref.split("/")
                     files.append({"file": fil.strip(), "library": lib.strip(), "usage": "DCLF"})
                 else:
                     files.append({"file": file_ref, "library": "*LIBL", "usage": "DCLF"})
 
             # CALL PGM(LIB/PGM) or CALL PGM(PGM)
-            match = re.search(r'CALL\s+PGM\(([^)]+)\)', line)
+            match = re.search(r"CALL\s+PGM\(([^)]+)\)", line)
             if match:
                 pgm_ref = match.group(1).strip()
-                if '/' in pgm_ref:
-                    lib, pgm = pgm_ref.split('/')
+                if "/" in pgm_ref:
+                    lib, pgm = pgm_ref.split("/")
                     programs.append({"program": pgm.strip(), "library": lib.strip()})
                 else:
                     programs.append({"program": pgm_ref, "library": "*LIBL"})
 
-    elif source_type in ('RPG', 'RPGLE', 'SQLRPGLE'):
+    elif source_type in ("RPG", "RPGLE", "SQLRPGLE"):
         for line in lines:
             # 固定形式RPG: F仕様書（6桁目がF）
             # FFILENAME IT  F  132        DISK
-            if len(line) > 6 and line[5:6] == 'F':
+            if len(line) > 6 and line[5:6] == "F":
                 file_name = line[6:16].strip()
-                if file_name and not file_name.startswith('*'):
-                    file_type = line[16:17] if len(line) > 16 else ''
-                    if file_type == 'I':
-                        usage = 'INPUT'
-                    elif file_type == 'O':
-                        usage = 'OUTPUT'
-                    elif file_type == 'U':
-                        usage = 'UPDATE'
+                if file_name and not file_name.startswith("*"):
+                    file_type = line[16:17] if len(line) > 16 else ""
+                    if file_type == "I":
+                        usage = "INPUT"
+                    elif file_type == "O":
+                        usage = "OUTPUT"
+                    elif file_type == "U":
+                        usage = "UPDATE"
                     else:
-                        usage = 'UNKNOWN'
+                        usage = "UNKNOWN"
                     files.append({"file": file_name, "library": "*LIBL", "usage": usage})
 
             # 固定形式RPG: C仕様書のCALL
-            if len(line) > 6 and line[5:6] == 'C':
-                match = re.search(r'CALL\s+\'?([A-Z0-9#@$]+)\'?', line)
+            if len(line) > 6 and line[5:6] == "C":
+                match = re.search(r"CALL\s+\'?([A-Z0-9#@$]+)\'?", line)
                 if match:
                     programs.append({"program": match.group(1), "library": "*LIBL"})
 
             # 自由形式RPGLE: DCL-F
-            match = re.search(r'DCL-F\s+(\w+)', line)
+            match = re.search(r"DCL-F\s+(\w+)", line)
             if match:
                 files.append({"file": match.group(1), "library": "*LIBL", "usage": "DCL-F"})
 
             # 自由形式RPGLE: 外部プロシージャ呼び出し
-            match = re.search(r'EXTPGM\s*\(\s*\'([^\']+)\'\s*\)', line)
+            match = re.search(r"EXTPGM\s*\(\s*\'([^\']+)\'\s*\)", line)
             if match:
                 programs.append({"program": match.group(1), "library": "*LIBL"})
 
@@ -1022,10 +985,7 @@ def _parse_source_references(source_text: str, source_type: str) -> dict:
 
 
 @mcp.tool()
-def get_program_references(
-    library: str,
-    program: str
-) -> dict:
+def get_program_references(library: str, program: str) -> dict:
     """
     プログラムが参照しているファイルや呼び出しているプログラムを取得します。
     IBM i 7.4+ではシステムビューから取得、7.3以下ではソース解析で取得します。
@@ -1047,7 +1007,7 @@ def get_program_references(
         result = {
             "program": f"{library.upper()}/{program.upper()}",
             "referenced_files": [],
-            "called_programs": []
+            "called_programs": [],
         }
 
         # Step 1: 参照ファイル一覧を取得（IBM i 7.4+）
@@ -1073,12 +1033,14 @@ def get_program_references(
         try:
             cursor.execute(file_sql, (library.upper(), program.upper()))
             for row in cursor.fetchall():
-                result["referenced_files"].append({
-                    "library": row[0].strip() if row[0] else "",
-                    "file": row[1].strip() if row[1] else "",
-                    "usage": row[2].strip() if row[2] else "",
-                    "description": row[3].strip() if row[3] else ""
-                })
+                result["referenced_files"].append(
+                    {
+                        "library": row[0].strip() if row[0] else "",
+                        "file": row[1].strip() if row[1] else "",
+                        "usage": row[2].strip() if row[2] else "",
+                        "description": row[3].strip() if row[3] else "",
+                    }
+                )
         except Exception as e:
             if "SQL0204" in str(e):
                 use_source_analysis = True
@@ -1097,10 +1059,12 @@ def get_program_references(
             try:
                 cursor.execute(call_sql, (library.upper(), program.upper()))
                 for row in cursor.fetchall():
-                    result["called_programs"].append({
-                        "library": row[0].strip() if row[0] else "",
-                        "program": row[1].strip() if row[1] else ""
-                    })
+                    result["called_programs"].append(
+                        {
+                            "library": row[0].strip() if row[0] else "",
+                            "program": row[1].strip() if row[1] else "",
+                        }
+                    )
             except Exception:
                 pass
 
@@ -1141,7 +1105,7 @@ def get_program_references(
                         "source_file": f"{src_lib}/{src_file}({src_member})",
                         "source_type": src_type,
                         "note": "Extracted from source code. "
-                                "May not include runtime-resolved references."
+                        "May not include runtime-resolved references.",
                     }
                 else:
                     result["error"] = f"Could not retrieve source: {source_data['error']}"
@@ -1154,10 +1118,7 @@ def get_program_references(
 
 
 @mcp.tool()
-def list_data_areas(
-    library: str,
-    pattern: str = "%"
-) -> list[dict]:
+def list_data_areas(library: str, pattern: str = "%") -> list[dict]:
     """
     ライブラリ内のデータエリア一覧を取得します。
 
@@ -1203,7 +1164,7 @@ def list_data_areas(
                 "length": row[2],
                 "decimal_positions": row[3],
                 "value": row[4].strip() if isinstance(row[4], str) else row[4],
-                "description": row[5].strip() if row[5] else ""
+                "description": row[5].strip() if row[5] else "",
             }
 
             results.append(dtaara)
@@ -1217,12 +1178,9 @@ def list_data_areas(
 # Tools - SQL実行
 # =============================================================================
 
+
 @mcp.tool()
-def execute_sql(
-    sql: str,
-    params: list = [],
-    max_rows: int = 1000
-) -> dict:
+def execute_sql(sql: str, params: list = [], max_rows: int = 1000) -> dict:
     """
     任意のSELECT文を実行します（読み取り専用）。
 
@@ -1269,11 +1227,7 @@ def execute_sql(
                 row_dict[col] = value
             rows.append(row_dict)
 
-        return {
-            "columns": columns,
-            "rows": rows,
-            "row_count": len(rows)
-        }
+        return {"columns": columns, "rows": rows, "row_count": len(rows)}
     finally:
         conn.close()
 
@@ -1282,6 +1236,7 @@ def execute_sql(
 # Resources - 情報参照用（URI経由でのデータアクセス）
 # Note: Claude Codeでは現状あまり使用されないが、MCP仕様として実装
 # =============================================================================
+
 
 @mcp.resource("as400://library/{library}/tables")
 def resource_tables(library: str) -> str:
@@ -1309,7 +1264,7 @@ def resource_table_schema(library: str, table: str) -> str:
         f"**Type**: {info['table']['TABLE_TYPE']}",
         "",
         "## Columns",
-        ""
+        "",
     ]
 
     for col in info["columns"]:
@@ -1347,7 +1302,7 @@ def resource_source(library: str, source_file: str, member: str) -> str:
         "",
         "```",
         result["source_text"],
-        "```"
+        "```",
     ]
 
     return "\n".join(lines)
@@ -1359,12 +1314,9 @@ def resource_source(library: str, source_file: str, member: str) -> str:
 #       ユーザーが明示的に指定した場合に使用される
 # =============================================================================
 
+
 @mcp.prompt()
-def create_crud_program(
-    library: str,
-    table: str,
-    program_type: str = "RPG"
-) -> str:
+def create_crud_program(library: str, table: str, program_type: str = "RPG") -> str:
     """
     CRUD画面用プログラムの作成プロンプト
 
@@ -1391,14 +1343,14 @@ def create_crud_program(
 
 ## テーブル情報
 - ライブラリ: {library.upper()}
-- テーブル名: {info['table']['TABLE_NAME']}
-- テーブル説明: {info['table']['TABLE_TEXT']}
+- テーブル名: {info["table"]["TABLE_NAME"]}
+- テーブル説明: {info["table"]["TABLE_TEXT"]}
 
 ## カラム情報
 {chr(10).join(columns_desc)}
 
 ## 主キー
-{', '.join(info['primary_key']) if info['primary_key'] else 'なし'}
+{", ".join(info["primary_key"]) if info["primary_key"] else "なし"}
 
 ## 要件
 1. 一覧画面（SUBFILE使用）
@@ -1421,11 +1373,7 @@ def create_crud_program(
 
 
 @mcp.prompt()
-def analyze_source(
-    library: str,
-    source_file: str,
-    member: str
-) -> str:
+def analyze_source(library: str, source_file: str, member: str) -> str:
     """
     ソースコード分析プロンプト
 
@@ -1446,13 +1394,13 @@ def analyze_source(
 ## ソース情報
 - ライブラリ: {library.upper()}
 - ソースファイル: {source_file.upper()}
-- メンバー: {meta['MEMBER_NAME']}
-- タイプ: {meta['SOURCE_TYPE']}
-- 説明: {meta['MEMBER_TEXT']}
+- メンバー: {meta["MEMBER_NAME"]}
+- タイプ: {meta["SOURCE_TYPE"]}
+- 説明: {meta["MEMBER_TEXT"]}
 
 ## ソースコード
 ```
-{result['source_text']}
+{result["source_text"]}
 ```
 
 ## 分析項目
@@ -1467,10 +1415,7 @@ def analyze_source(
 
 
 @mcp.prompt()
-def generate_cl_for_batch(
-    library: str,
-    description: str
-) -> str:
+def generate_cl_for_batch(library: str, description: str) -> str:
     """
     バッチ処理用CLプログラム作成プロンプト
 
@@ -1495,7 +1440,7 @@ def generate_cl_for_batch(
 
 ## 利用可能なテーブル
 {chr(10).join(table_list[:20])}
-{'...(他' + str(len(tables) - 20) + 'テーブル)' if len(tables) > 20 else ''}
+{"...(他" + str(len(tables) - 20) + "テーブル)" if len(tables) > 20 else ""}
 
 ## CLプログラム要件
 1. エラーハンドリング（MONMSG）
@@ -1510,6 +1455,7 @@ CLプログラムを作成してください。
 # =============================================================================
 # エントリーポイント
 # =============================================================================
+
 
 def main():
     """
@@ -1534,7 +1480,7 @@ def main():
         # デフォルト値（実際には環境変数での設定が必須）
         # CCSID=1208: UTF-8で通信, EXTCOLINFO=1: 拡張カラム情報
         "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;"
-        "UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1"
+        "UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1",
     )
 
     # FastMCPサーバーを起動（stdin/stdout経由でMCPプロトコル通信）

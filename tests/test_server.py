@@ -1,6 +1,5 @@
 """Tests for AS400 MCP Server"""
 
-
 import pytest
 
 
@@ -13,7 +12,10 @@ class TestListTables:
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
-            ("TABLE_NAME",), ("TABLE_TEXT",), ("TABLE_TYPE",), ("ROW_COUNT",)
+            ("TABLE_NAME",),
+            ("TABLE_TEXT",),
+            ("TABLE_TYPE",),
+            ("ROW_COUNT",),
         ]
         mock_cursor.fetchall.return_value = sample_tables
 
@@ -29,7 +31,10 @@ class TestListTables:
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
-            ("TABLE_NAME",), ("TABLE_TEXT",), ("TABLE_TYPE",), ("ROW_COUNT",)
+            ("TABLE_NAME",),
+            ("TABLE_TEXT",),
+            ("TABLE_TYPE",),
+            ("ROW_COUNT",),
         ]
         # Filter to only ORDER tables
         filtered = [t for t in sample_tables if t[0].startswith("ORDER")]
@@ -50,9 +55,15 @@ class TestGetColumns:
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
-            ("COLUMN_NAME",), ("COLUMN_TEXT",), ("DATA_TYPE",),
-            ("LENGTH",), ("DECIMAL_PLACES",), ("IS_NULLABLE",),
-            ("ORDINAL_POSITION",), ("DEFAULT_VALUE",), ("CCSID",)
+            ("COLUMN_NAME",),
+            ("COLUMN_TEXT",),
+            ("DATA_TYPE",),
+            ("LENGTH",),
+            ("DECIMAL_PLACES",),
+            ("IS_NULLABLE",),
+            ("ORDINAL_POSITION",),
+            ("DEFAULT_VALUE",),
+            ("CCSID",),
         ]
         mock_cursor.fetchall.return_value = sample_columns
 
@@ -69,9 +80,15 @@ class TestGetColumns:
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
-            ("COLUMN_NAME",), ("COLUMN_TEXT",), ("DATA_TYPE",),
-            ("LENGTH",), ("DECIMAL_PLACES",), ("IS_NULLABLE",),
-            ("ORDINAL_POSITION",), ("DEFAULT_VALUE",), ("CCSID",)
+            ("COLUMN_NAME",),
+            ("COLUMN_TEXT",),
+            ("DATA_TYPE",),
+            ("LENGTH",),
+            ("DECIMAL_PLACES",),
+            ("IS_NULLABLE",),
+            ("ORDINAL_POSITION",),
+            ("DEFAULT_VALUE",),
+            ("CCSID",),
         ]
         mock_cursor.fetchall.return_value = sample_columns
 
@@ -95,10 +112,16 @@ class TestGetSource:
 
         # First call: metadata
         mock_cursor.description = [
-            ("MEMBER_NAME",), ("SOURCE_TYPE",), ("MEMBER_TEXT",), ("LAST_UPDATED",)
+            ("MEMBER_NAME",),
+            ("SOURCE_TYPE",),
+            ("MEMBER_TEXT",),
+            ("LAST_UPDATED",),
         ]
         mock_cursor.fetchone.return_value = (
-            "ORDMNT", "RPGLE", "受注メンテナンス", "2024-01-15 10:30:00"
+            "ORDMNT",
+            "RPGLE",
+            "受注メンテナンス",
+            "2024-01-15 10:30:00",
         )
 
         # Second call: source lines
@@ -120,7 +143,10 @@ class TestGetSource:
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
-            ("MEMBER_NAME",), ("SOURCE_TYPE",), ("MEMBER_TEXT",), ("LAST_UPDATED",)
+            ("MEMBER_NAME",),
+            ("SOURCE_TYPE",),
+            ("MEMBER_TEXT",),
+            ("LAST_UPDATED",),
         ]
         mock_cursor.fetchone.return_value = None
 
@@ -176,8 +202,11 @@ class TestPrompts:
 
         # Mock get_table_info response
         mock_cursor.description = [
-            ("TABLE_NAME",), ("TABLE_TEXT",), ("TABLE_TYPE",),
-            ("ROW_COUNT",), ("DATA_SIZE",)
+            ("TABLE_NAME",),
+            ("TABLE_TEXT",),
+            ("TABLE_TYPE",),
+            ("ROW_COUNT",),
+            ("DATA_SIZE",),
         ]
         mock_cursor.fetchone.return_value = ("ORDER", "受注マスタ", "P", 1000, 50000)
         mock_cursor.fetchall.return_value = []
