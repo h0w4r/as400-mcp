@@ -8,7 +8,7 @@ class TestListTables:
 
     def test_list_tables_basic(self, mock_odbc, sample_tables):
         """Test basic table listing"""
-        from as400_mcp.server import list_tables
+        from as400_mcp.server import _list_tables_internal
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
@@ -19,7 +19,7 @@ class TestListTables:
         ]
         mock_cursor.fetchall.return_value = sample_tables
 
-        result = list_tables("MYLIB")
+        result = _list_tables_internal("MYLIB")
 
         assert len(result) == 3
         assert result[0]["TABLE_NAME"] == "ORDER"
@@ -27,7 +27,7 @@ class TestListTables:
 
     def test_list_tables_with_pattern(self, mock_odbc, sample_tables):
         """Test table listing with pattern filter"""
-        from as400_mcp.server import list_tables
+        from as400_mcp.server import _list_tables_internal
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
@@ -40,7 +40,7 @@ class TestListTables:
         filtered = [t for t in sample_tables if t[0].startswith("ORDER")]
         mock_cursor.fetchall.return_value = filtered
 
-        result = list_tables("MYLIB", pattern="ORDER%")
+        result = _list_tables_internal("MYLIB", pattern="ORDER%")
 
         assert len(result) == 2
         assert all("ORDER" in r["TABLE_NAME"] for r in result)
@@ -51,7 +51,7 @@ class TestGetColumns:
 
     def test_get_columns_basic(self, mock_odbc, sample_columns):
         """Test basic column retrieval"""
-        from as400_mcp.server import get_columns
+        from as400_mcp.server import _get_columns_internal
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
@@ -67,7 +67,7 @@ class TestGetColumns:
         ]
         mock_cursor.fetchall.return_value = sample_columns
 
-        result = get_columns("MYLIB", "ORDER")
+        result = _get_columns_internal("MYLIB", "ORDER")
 
         assert len(result) == 4
         assert result[0]["COLUMN_NAME"] == "ORDNO"
@@ -76,7 +76,7 @@ class TestGetColumns:
 
     def test_get_columns_japanese_labels(self, mock_odbc, sample_columns):
         """Test that Japanese labels are preserved"""
-        from as400_mcp.server import get_columns
+        from as400_mcp.server import _get_columns_internal
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
@@ -92,7 +92,7 @@ class TestGetColumns:
         ]
         mock_cursor.fetchall.return_value = sample_columns
 
-        result = get_columns("MYLIB", "ORDER")
+        result = _get_columns_internal("MYLIB", "ORDER")
 
         # Verify all Japanese labels are present
         labels = [r["COLUMN_TEXT"] for r in result]
@@ -106,7 +106,7 @@ class TestGetSource:
 
     def test_get_source_basic(self, mock_odbc):
         """Test basic source retrieval"""
-        from as400_mcp.server import get_source
+        from as400_mcp.server import _get_source_internal
 
         mock_conn, mock_cursor = mock_odbc
 
@@ -131,7 +131,7 @@ class TestGetSource:
             (3.00, 240115, "     D ORDNO           S             10P 0"),
         ]
 
-        result = get_source("MYLIB", "QRPGSRC", "ORDMNT")
+        result = _get_source_internal("MYLIB", "QRPGSRC", "ORDMNT")
 
         assert "metadata" in result
         assert result["metadata"]["MEMBER_NAME"] == "ORDMNT"
@@ -139,7 +139,7 @@ class TestGetSource:
 
     def test_get_source_not_found(self, mock_odbc):
         """Test source not found error"""
-        from as400_mcp.server import get_source
+        from as400_mcp.server import _get_source_internal
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [
@@ -150,7 +150,7 @@ class TestGetSource:
         ]
         mock_cursor.fetchone.return_value = None
 
-        result = get_source("MYLIB", "QRPGSRC", "NOTEXIST")
+        result = _get_source_internal("MYLIB", "QRPGSRC", "NOTEXIST")
 
         assert "error" in result
 
@@ -160,24 +160,24 @@ class TestExecuteSql:
 
     def test_execute_sql_select_only(self):
         """Test that only SELECT statements are allowed"""
-        from as400_mcp.server import execute_sql
+        from as400_mcp.server import _execute_sql_internal
 
         # DELETE should be rejected
-        result = execute_sql("DELETE FROM MYLIB.ORDER")
+        result = _execute_sql_internal("DELETE FROM MYLIB.ORDER")
         assert "error" in result
         assert "SELECT" in result["error"]
 
         # UPDATE should be rejected
-        result = execute_sql("UPDATE MYLIB.ORDER SET ORDAMT = 0")
+        result = _execute_sql_internal("UPDATE MYLIB.ORDER SET ORDAMT = 0")
         assert "error" in result
 
         # INSERT should be rejected
-        result = execute_sql("INSERT INTO MYLIB.ORDER VALUES(1)")
+        result = _execute_sql_internal("INSERT INTO MYLIB.ORDER VALUES(1)")
         assert "error" in result
 
     def test_execute_sql_valid_select(self, mock_odbc):
         """Test valid SELECT execution"""
-        from as400_mcp.server import execute_sql
+        from as400_mcp.server import _execute_sql_internal
 
         mock_conn, mock_cursor = mock_odbc
         mock_cursor.description = [("ORDNO",), ("CUSTCD",)]
@@ -186,7 +186,7 @@ class TestExecuteSql:
             (2, "CUST002"),
         ]
 
-        result = execute_sql("SELECT ORDNO, CUSTCD FROM MYLIB.ORDER")
+        result = _execute_sql_internal("SELECT ORDNO, CUSTCD FROM MYLIB.ORDER")
 
         assert "rows" in result
         assert len(result["rows"]) == 2

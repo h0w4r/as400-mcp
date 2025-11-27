@@ -1179,23 +1179,9 @@ def list_data_areas(library: str, pattern: str = "%") -> list[dict]:
 # =============================================================================
 
 
-@mcp.tool()
-def execute_sql(sql: str, params: list = [], max_rows: int = 1000) -> dict:
+def _execute_sql_internal(sql: str, params: list = [], max_rows: int = 1000) -> dict:
     """
-    任意のSELECT文を実行します（読み取り専用）。
-
-    INSERT/UPDATE/DELETEは実行できません（セキュリティのため）。
-
-    Args:
-        sql: 実行するSQL文（SELECT文のみ許可）
-        params: SQLパラメータ（プレースホルダ ? に対応、デフォルト空配列）
-        max_rows: 最大取得行数（デフォルト1000）
-
-    Returns:
-        {columns: [カラム名...], rows: [{カラム名: 値}...], row_count: 件数}
-
-    Example:
-        execute_sql("SELECT * FROM MYLIB.ORDERS WHERE STATUS = ?", ["OPEN"], 100)
+    任意のSELECT文を実行する内部関数。
     """
     # セキュリティ: SELECT文以外を拒否（データ変更を防止）
     sql_upper = sql.strip().upper()
@@ -1230,6 +1216,27 @@ def execute_sql(sql: str, params: list = [], max_rows: int = 1000) -> dict:
         return {"columns": columns, "rows": rows, "row_count": len(rows)}
     finally:
         conn.close()
+
+
+@mcp.tool()
+def execute_sql(sql: str, params: list = [], max_rows: int = 1000) -> dict:
+    """
+    任意のSELECT文を実行します（読み取り専用）。
+
+    INSERT/UPDATE/DELETEは実行できません（セキュリティのため）。
+
+    Args:
+        sql: 実行するSQL文（SELECT文のみ許可）
+        params: SQLパラメータ（プレースホルダ ? に対応、デフォルト空配列）
+        max_rows: 最大取得行数（デフォルト1000）
+
+    Returns:
+        {columns: [カラム名...], rows: [{カラム名: 値}...], row_count: 件数}
+
+    Example:
+        execute_sql("SELECT * FROM MYLIB.ORDERS WHERE STATUS = ?", ["OPEN"], 100)
+    """
+    return _execute_sql_internal(sql, params, max_rows)
 
 
 # =============================================================================
