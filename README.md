@@ -102,6 +102,25 @@ pip install -e .
 }
 ```
 
+### FTP接続情報を別に設定する場合
+
+```json
+{
+  "mcpServers": {
+    "as400": {
+      "command": "C:/path/to/as400-mcp/.venv/Scripts/python.exe",
+      "args": ["-m", "as400_mcp.server"],
+      "env": {
+        "AS400_CONNECTION_STRING": "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1",
+        "AS400_FTP_HOST": "YOUR_FTP_HOST",
+        "AS400_FTP_USER": "FTP_USER",
+        "AS400_FTP_PASSWORD": "FTP_PASSWORD"
+      }
+    }
+  }
+}
+```
+
 設定後、Claude Codeを再起動して `/mcp` コマンドでas400サーバーが表示されることを確認してください。
 
 ### 接続文字列のオプション
@@ -113,6 +132,22 @@ pip install -e .
 | `PWD` | パスワード |
 | `CCSID=1208` | UTF-8通信（日本語対応） |
 | `EXTCOLINFO=1` | 拡張カラム情報（COLUMN_TEXT等）を取得 |
+
+### FTP接続設定（日本語EBCDICソース用）
+
+日本語を含むソースをCCSID 5035/5123（日本語EBCDIC）のソースファイルにアップロードする場合、FTP経由でファイル転送を行います。
+
+| 環境変数 | 説明 |
+|----------|------|
+| `AS400_FTP_HOST` | FTPホスト名/IPアドレス |
+| `AS400_FTP_USER` | FTPユーザー名 |
+| `AS400_FTP_PASSWORD` | FTPパスワード |
+
+未設定の場合は`AS400_CONNECTION_STRING`の`SYSTEM`/`UID`/`PWD`を使用します。
+
+**必要条件**:
+- Windows: WSL（Windows Subsystem for Linux）がインストールされていること
+- Linux/macOS: iconvコマンドが利用可能なこと
 
 ## 使い方
 
