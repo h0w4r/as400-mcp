@@ -306,6 +306,76 @@ def get_columns(library: str, table: str) -> list[dict]:
 # =============================================================================
 
 
+def _list_source_files_internal(library: str, pattern: str = "%") -> list[dict]:
+    """ソースファイル一覧を取得する内部関数（ResourceやToolから呼び出し可能）。"""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+
+        # FILE_TYPE = 'S' でソースファイルを抽出
+        # メンバー数も取得
+        sql = """
+            SELECT
+                t.SYSTEM_TABLE_NAME AS SOURCE_FILE,
+                COALESCE(t.TABLE_TEXT, '') AS DESCRIPTION,
+                (
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        QSYS2.SYSPARTITIONSTAT p
+                    WHERE
+                        p.SYSTEM_TABLE_SCHEMA = t.SYSTEM_TABLE_SCHEMA
+                    AND p.SYSTEM_TABLE_NAME = t.SYSTEM_TABLE_NAME
+                ) AS MEMBER_COUNT,
+                (
+                    SELECT
+                        MAX(c.CCSID)
+                    FROM
+                        QSYS2.SYSCOLUMNS c
+                    WHERE
+                        c.SYSTEM_TABLE_SCHEMA = t.SYSTEM_TABLE_SCHEMA
+                        AND c.SYSTEM_TABLE_NAME = t.SYSTEM_TABLE_NAME
+                        AND c.COLUMN_NAME = 'SRCDTA'
+                ) AS CCSID
+            FROM
+                QSYS2.SYSTABLES t
+            WHERE
+                t.SYSTEM_TABLE_SCHEMA = ?
+                AND t.SYSTEM_TABLE_NAME LIKE ?
+                AND t.FILE_TYPE = 'S'
+            ORDER BY
+                t.SYSTEM_TABLE_NAME
+        """
+
+        cursor.execute(sql, [library.upper(), pattern])
+
+        columns = [desc[0] for desc in cursor.description]
+        results = []
+        for row in cursor.fetchall():
+            results.append(strip_values(dict(zip(columns, row))))
+
+        return results
+    finally:
+        conn.close()
+
+
+@mcp.tool()
+def list_source_files(library: str, pattern: str = "%") -> list[dict]:
+    """
+    指定ライブラリ内のソースファイル一覧を取得します。
+    ソースファイルにはCL/RPG/COBOL/DDS等のソースコードが格納されています。
+    ソースファイル名はユーザー定義可能です（QCLSRC, QRPGSRC, MYSRC等）。
+
+    Args:
+        library: ライブラリ名
+        pattern: ソースファイル名のパターン（%でワイルドカード）
+
+    Returns:
+        ソースファイル一覧（SOURCE_FILE, DESCRIPTION, MEMBER_COUNT, CCSID）
+    """
+    return _list_source_files_internal(library, pattern)
+
+
 @mcp.tool()
 def list_sources(library: str, source_file: str = "QCLSRC", pattern: str = "%") -> list[dict]:
     """
@@ -313,12 +383,14 @@ def list_sources(library: str, source_file: str = "QCLSRC", pattern: str = "%") 
 
     Args:
         library: ライブラリ名
-        source_file: ソースファイル名
+        source_file: ソースファイル名（任意の名前が使用可能）
+            代表的な命名例:
             - QCLSRC: CLプログラム
             - QRPGSRC: RPG（固定形式）
             - QRPGLESRC: RPG ILE（自由形式）
             - QCBLSRC: COBOL
             - QDDSSRC: DDS（画面/ファイル定義）
+            ※ユーザー定義のソースファイル名も指定可能（例: QAIASRC, MYSRC等）
         pattern: メンバー名のパターン（%でワイルドカード）
 
     Returns:
@@ -439,7 +511,8 @@ def get_source(library: str, source_file: str, member: str) -> dict:
 
     Args:
         library: ライブラリ名
-        source_file: ソースファイル名（QCLSRC, QRPGSRC, QRPGLESRC, QCBLSRC, QDDSSRC）
+        source_file: ソースファイル名（任意の名前が使用可能）
+            代表的な命名例: QCLSRC, QRPGSRC, QRPGLESRC, QCBLSRC, QDDSSRC
         member: メンバー名
 
     Returns:
@@ -566,7 +639,7 @@ def _get_table_info_internal(library: str, table: str) -> dict:
         columns = _get_columns_internal(library, table)
 
         # Step 3: キー情報を取得
-        # QSYS2.SYSKEYCST: 主キー制約のカラム情報
+        # まずSYSKEYCST（SQL制約）を試し、なければQADBKFLD（DDSキー）を使用
         key_sql = """
             SELECT
                 COLUMN_NAME,       -- キーカラム名
@@ -581,7 +654,25 @@ def _get_table_info_internal(library: str, table: str) -> dict:
         """
 
         cursor.execute(key_sql, (library.upper(), table.upper()))
-        keys = [row[0] for row in cursor.fetchall()]
+        keys = [row[0].strip() for row in cursor.fetchall()]
+
+        # SQL制約でキーが取れない場合、DDSキー（QADBKFLD）を取得
+        if not keys:
+            try:
+                dds_key_sql = """
+                    SELECT
+                        DBKFLD
+                    FROM
+                        QSYS.QADBKFLD
+                    WHERE
+                        DBKLIB = ? AND DBKFIL = ?
+                    ORDER BY
+                        DBKORD
+                """
+                cursor.execute(dds_key_sql, (library.upper(), table.upper()))
+                keys = [row[0].strip() for row in cursor.fetchall()]
+            except Exception:
+                pass  # QADBKFLDにアクセスできない場合は空のまま
 
         # Step 4: インデックス情報を取得
         # QSYS2.SYSINDEXES: インデックス（論理ファイル）の情報
@@ -1298,6 +1389,26 @@ def resource_table_schema(library: str, table: str) -> str:
     return "\n".join(lines)
 
 
+@mcp.resource("as400://library/{library}/sources")
+def resource_source_files(library: str) -> str:
+    """ライブラリ内のソースファイル一覧をリソースとして提供
+
+    ソースファイル名はユーザー定義可能です（QCLSRC, QRPGSRC, MYSRC等）。
+    """
+    files = _list_source_files_internal(library)
+
+    if isinstance(files, dict) and "error" in files:
+        return files["error"]
+
+    lines = [f"# Source Files in {library.upper()}", ""]
+    for f in files:
+        member_count = f.get("MEMBER_COUNT", 0)
+        desc = f.get("DESCRIPTION", "")
+        lines.append(f"- **{f['SOURCE_FILE']}**: {desc} ({member_count} members)")
+
+    return "\n".join(lines)
+
+
 @mcp.resource("as400://library/{library}/source/{source_file}/{member}")
 def resource_source(library: str, source_file: str, member: str) -> str:
     """ソースコードをリソースとして提供"""
@@ -1321,66 +1432,7 @@ def resource_source(library: str, source_file: str, member: str) -> str:
 
 # =============================================================================
 # Prompts - プロンプトテンプレート
-# Note: Claude Codeでは現状あまり使用されないが、MCP仕様として実装
-#       ユーザーが明示的に指定した場合に使用される
 # =============================================================================
-
-
-@mcp.prompt()
-def create_crud_program(library: str, table: str, program_type: str = "RPG") -> str:
-    """
-    CRUD画面用プログラムの作成プロンプト
-
-    Args:
-        library: ライブラリ名
-        table: テーブル名
-        program_type: RPG/RPGLE/CL
-    """
-    # テーブル情報を取得
-    info = _get_table_info_internal(library, table)
-
-    if "error" in info:
-        return f"Error: {info['error']}"
-
-    columns_desc = []
-    for col in info["columns"]:
-        key_mark = "[PK] " if col["COLUMN_NAME"] in info["primary_key"] else ""
-        columns_desc.append(
-            f"  - {key_mark}{col['COLUMN_NAME']}: {col['COLUMN_TEXT']} "
-            f"({col['DATA_TYPE']}({col['LENGTH']}))"
-        )
-
-    return f"""以下のテーブル情報を元に、{program_type}でCRUD画面プログラムを作成してください。
-
-## テーブル情報
-- ライブラリ: {library.upper()}
-- テーブル名: {info["table"]["TABLE_NAME"]}
-- テーブル説明: {info["table"]["TABLE_TEXT"]}
-
-## カラム情報
-{chr(10).join(columns_desc)}
-
-## 主キー
-{", ".join(info["primary_key"]) if info["primary_key"] else "なし"}
-
-## 要件
-1. 一覧画面（SUBFILE使用）
-   - 全カラムのラベルを日本語で表示
-   - ページング機能
-   - 検索機能
-
-2. 詳細/編集画面
-   - 新規登録、更新、削除機能
-   - 入力バリデーション（データ型に応じた）
-   - 主キーは更新不可
-
-3. 必要なオブジェクト
-   - {program_type}プログラム
-   - DSPFファイル（画面定義）
-   - 必要に応じてPFILEの定義
-
-プログラムを作成してください。
-"""
 
 
 @mcp.prompt()
@@ -1390,7 +1442,8 @@ def analyze_source(library: str, source_file: str, member: str) -> str:
 
     Args:
         library: ライブラリ名
-        source_file: ソースファイル名
+        source_file: ソースファイル名（任意の名前が使用可能）
+            代表的な命名例: QCLSRC, QRPGSRC, QRPGLESRC, QCBLSRC, QDDSSRC
         member: メンバー名
     """
     result = _get_source_internal(library, source_file, member)
@@ -1422,44 +1475,6 @@ def analyze_source(library: str, source_file: str, member: str) -> str:
 5. 改善提案（あれば）
 
 分析結果を日本語で説明してください。
-"""
-
-
-@mcp.prompt()
-def generate_cl_for_batch(library: str, description: str) -> str:
-    """
-    バッチ処理用CLプログラム作成プロンプト
-
-    Args:
-        library: ライブラリ名
-        description: 処理内容の説明
-    """
-    # ライブラリ内のテーブル一覧を取得
-    tables = _list_tables_internal(library)
-
-    table_list = []
-    for t in tables:
-        table_list.append(f"  - {t['TABLE_NAME']}: {t['TABLE_TEXT']}")
-
-    return f"""以下の要件でバッチ処理用のCLプログラムを作成してください。
-
-## 処理概要
-{description}
-
-## 対象ライブラリ
-{library.upper()}
-
-## 利用可能なテーブル
-{chr(10).join(table_list[:20])}
-{"...(他" + str(len(tables) - 20) + "テーブル)" if len(tables) > 20 else ""}
-
-## CLプログラム要件
-1. エラーハンドリング（MONMSG）
-2. ジョブログへの処理開始/終了メッセージ出力
-3. 必要に応じてファイルのOVRDBF/DLTOVR
-4. 適切なコメント
-
-CLプログラムを作成してください。
 """
 
 

@@ -19,6 +19,7 @@ ODBC経由でAS400のメタデータやソースコードを取得し、CL/RPG/C
 | `list_libraries` | ライブラリ一覧（ラベル付き） |
 | `list_tables` | テーブル/ファイル一覧 |
 | `get_columns` | カラム一覧（日本語ラベル、型、キー情報） |
+| `list_source_files` | ソースファイル一覧（QCLSRC, QRPGSRC等） |
 | `list_sources` | ソースメンバー一覧 |
 | `get_source` | ソースコード取得 |
 | `get_data` | テーブルデータ取得 |
