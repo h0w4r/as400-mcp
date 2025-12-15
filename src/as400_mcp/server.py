@@ -700,7 +700,7 @@ def _get_table_info_internal(library: str, table: str) -> dict:
 @mcp.tool()
 def get_table_info(library: str, table: str) -> dict:
     """
-    テーブルの詳細情報を取得します（DDL生成用）。
+    テーブルの詳細情報を取得します。
 
     Args:
         library: ライブラリ名
