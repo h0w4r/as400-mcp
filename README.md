@@ -9,8 +9,7 @@ ODBC経由でAS400のメタデータやソースコードを取得し、CL/RPG/C
 - **ソースコード参照**: QCLSRC/QRPGSRC等からソースを取得
 - **プログラム依存関係調査**: 参照ファイル・呼び出し関係を取得
 - **システム情報取得**: OSバージョン、PTFレベル等を確認
-- **CRUD画面生成支援**: テーブル構造から画面プログラムを生成
-- **ソースアップロード・コンパイル**: Claude Codeで作成したソースを直接AS400に登録・コンパイル
+- **読み取り専用**: セキュリティのため全て読み取り操作のみ
 
 ## 利用可能なツール
 
@@ -23,16 +22,12 @@ ODBC経由でAS400のメタデータやソースコードを取得し、CL/RPG/C
 | `list_sources` | ソースメンバー一覧 |
 | `get_source` | ソースコード取得 |
 | `get_data` | テーブルデータ取得 |
-| `get_table_info` | テーブル詳細情報（DDL用） |
+| `get_table_info` | テーブル詳細情報 |
 | `get_system_info` | システム情報（OSバージョン、PTF等） |
 | `list_programs` | プログラム一覧（RPG/CL/COBOL等） |
 | `get_program_references` | プログラムの参照ファイル・呼び出し関係 |
 | `list_data_areas` | データエリア一覧（共有変数） |
 | `execute_sql` | 任意SELECT実行（読み取り専用） |
-| `upload_source` | ソースコードをAS400に登録 |
-| `compile_source` | ソースをコンパイル |
-
-※ `upload_source`、`compile_source`はシステムライブラリ（Q*）への操作は禁止されています。
 
 ## インストール
 
@@ -103,25 +98,6 @@ pip install -e .
 }
 ```
 
-### FTP接続情報を別に設定する場合
-
-```json
-{
-  "mcpServers": {
-    "as400": {
-      "command": "C:/path/to/as400-mcp/.venv/Scripts/python.exe",
-      "args": ["-m", "as400_mcp.server"],
-      "env": {
-        "AS400_CONNECTION_STRING": "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1",
-        "AS400_FTP_HOST": "YOUR_FTP_HOST",
-        "AS400_FTP_USER": "FTP_USER",
-        "AS400_FTP_PASSWORD": "FTP_PASSWORD"
-      }
-    }
-  }
-}
-```
-
 設定後、Claude Codeを再起動して `/mcp` コマンドでas400サーバーが表示されることを確認してください。
 
 ### 接続文字列のオプション
@@ -134,33 +110,18 @@ pip install -e .
 | `CCSID=1208` | UTF-8通信（日本語対応） |
 | `EXTCOLINFO=1` | 拡張カラム情報（COLUMN_TEXT等）を取得 |
 
-### FTP接続設定（日本語EBCDICソース用）
-
-日本語を含むソースをCCSID 5035/5123（日本語EBCDIC）のソースファイルにアップロードする場合、FTP経由でファイル転送を行います。
-
-| 環境変数 | 説明 |
-|----------|------|
-| `AS400_FTP_HOST` | FTPホスト名/IPアドレス |
-| `AS400_FTP_USER` | FTPユーザー名 |
-| `AS400_FTP_PASSWORD` | FTPパスワード |
-
-未設定の場合は`AS400_CONNECTION_STRING`の`SYSTEM`/`UID`/`PWD`を使用します。
-
-**必要条件**:
-- Windows: WSL（Windows Subsystem for Linux）がインストールされていること
-- Linux/macOS: iconvコマンドが利用可能なこと
-
 ## 使い方
 
 ### 基本的なワークフロー
 
 ```
-ユーザー: MYLIBの受注テーブルでCRUD画面を作って
+ユーザー: MYLIBの受注テーブルを使ったWeb画面を作って
 
 Claude Code:
 1. get_table_info("MYLIB", "ORDER") でテーブル情報取得
 2. カラム情報（日本語ラベル付き）を確認
-3. RPGLE + DSPFソースを生成
+3. get_data でサンプルデータを確認
+4. Web画面（React等）とAPI（FastAPI等）を生成
 ```
 
 ### 使用例
@@ -174,6 +135,7 @@ Claude Code:
 #### 既存ソース参照
 
 ```
+> MYLIBのソースファイル一覧を見せて
 > MYLIB/QRPGSRC内のORDMNTソースを見せて
 ```
 
@@ -184,26 +146,12 @@ Claude Code:
 > ORDER001プログラムが参照しているファイルを教えて
 ```
 
-#### CRUD画面作成
+#### Web画面生成
 
 ```
-> MYLIBのCUSTOMERテーブルでRPGLEのCRUD画面を作って
-  - 一覧画面はSUBFILE使用
+> MYLIBのCUSTOMERテーブルでWebの一覧・詳細画面を作って
   - 日本語ラベルを画面項目名に
   - 検索機能付き
-```
-
-#### バッチCL作成
-
-```
-> 月次で受注データをアーカイブするCLプログラムを作って
-```
-
-#### ソースのアップロードとコンパイル
-
-```
-> このRPGLEソースをMYLIB/QRPGSRCにORDMNTとして登録して
-> MYLIB/QRPGSRC(ORDMNT)をコンパイルして
 ```
 
 #### システム情報確認

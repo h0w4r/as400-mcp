@@ -46,6 +46,33 @@ class TestListTables:
         assert all("ORDER" in r["TABLE_NAME"] for r in result)
 
 
+class TestListSourceFiles:
+    """Tests for list_source_files tool"""
+
+    def test_list_source_files_basic(self, mock_odbc):
+        """Test basic source file listing"""
+        from as400_mcp.server import _list_source_files_internal
+
+        mock_conn, mock_cursor = mock_odbc
+        mock_cursor.description = [
+            ("SOURCE_FILE",),
+            ("DESCRIPTION",),
+            ("MEMBER_COUNT",),
+            ("CCSID",),
+        ]
+        mock_cursor.fetchall.return_value = [
+            ("QCLSRC", "CL Source", 10, 5035),
+            ("QRPGSRC", "RPG Source", 25, 5035),
+            ("QRPGLESRC", "RPGLE Source", 15, 5035),
+        ]
+
+        result = _list_source_files_internal("MYLIB")
+
+        assert len(result) == 3
+        assert result[0]["SOURCE_FILE"] == "QCLSRC"
+        assert result[1]["MEMBER_COUNT"] == 25
+
+
 class TestGetColumns:
     """Tests for get_columns tool"""
 
@@ -192,31 +219,6 @@ class TestExecuteSql:
         assert len(result["rows"]) == 2
 
 
-class TestPrompts:
-    """Tests for MCP prompts"""
-
-    def test_create_crud_program_prompt(self, mock_odbc, sample_columns):
-        """Test CRUD program prompt generation"""
-
-        mock_conn, mock_cursor = mock_odbc
-
-        # Mock get_table_info response
-        mock_cursor.description = [
-            ("TABLE_NAME",),
-            ("TABLE_TEXT",),
-            ("TABLE_TYPE",),
-            ("ROW_COUNT",),
-            ("DATA_SIZE",),
-        ]
-        mock_cursor.fetchone.return_value = ("ORDER", "受注マスタ", "P", 1000, 50000)
-        mock_cursor.fetchall.return_value = []
-
-        # This will fail without full mock setup, but tests the structure
-        # In real test, we'd mock get_table_info completely
-        # result = create_crud_program("MYLIB", "ORDER", "RPGLE")
-        # assert "CRUD" in result or "受注" in result
-
-
 class TestResourceURIs:
     """Tests for MCP resource URIs"""
 
@@ -225,11 +227,13 @@ class TestResourceURIs:
         # Resource URIs should follow pattern:
         # as400://library/{lib}/tables
         # as400://library/{lib}/table/{tbl}/schema
+        # as400://library/{lib}/sources
         # as400://library/{lib}/source/{srcf}/{mbr}
 
         expected_patterns = [
             "as400://library/MYLIB/tables",
             "as400://library/MYLIB/table/ORDER/schema",
+            "as400://library/MYLIB/sources",
             "as400://library/MYLIB/source/QRPGSRC/ORDMNT",
         ]
 

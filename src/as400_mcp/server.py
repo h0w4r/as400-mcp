@@ -31,55 +31,45 @@ mcp = FastMCP(
     instructions="""
 # AS400/IBM i 開発支援MCPサーバー
 
-このMCPサーバーはAS400（IBM i）のCL/RPGプログラム開発を支援します。
+AS400（IBM i）のメタデータやソースコードを取得し、Webアプリケーション開発を支援します。
+すべて読み取り専用で、AS400のデータを変更することはありません。
 
 ## 主な機能
-- ライブラリ、ファイル、カラム情報の取得
-- ソースコード（CL/RPG/COBOL等）の取得・参照
-- テーブルデータの取得
+- ライブラリ、ファイル、カラム情報の取得（日本語ラベル対応）
+- ソースコード（CL/RPG/COBOL/DDS等）の取得・参照
+- テーブルデータの取得（サンプルデータ確認用）
 - プログラム一覧・参照関係の調査
-- データエリア（共有変数）の取得
 - システム情報（OSバージョン等）の取得
 
 ## 使用時のガイドライン
 
-### CL/RPGプログラム作成時
-1. まず `list_libraries` でライブラリ一覧を確認
+### Webアプリケーション開発時
+1. `list_libraries` でライブラリ一覧を確認
 2. `list_tables` で対象ライブラリのファイル一覧を確認
 3. `get_columns` でカラム情報（日本語ラベル含む）を取得
-4. 既存のソースがあれば `list_sources` と `get_source` で参照
-5. 上記情報を元にCL/RPGプログラムを生成
+4. `get_data` でサンプルデータを確認
+5. 上記情報を元にWeb画面・APIを生成
 
-### 既存プログラムの調査時
-1. `list_programs` でライブラリ内のプログラム一覧を取得
-2. `get_program_references` で参照ファイル・呼び出し関係を調査
+### 既存システム調査時
+1. `list_source_files` でソースファイル一覧を確認
+2. `list_sources` でソースメンバー一覧を取得
 3. `get_source` でソースコードを取得して内容を確認
+4. `get_program_references` で参照ファイル・呼び出し関係を調査
 
-### バッチ処理CL作成時
-1. `list_data_areas` で共有パラメータ（処理日付、実行フラグ等）を確認
-2. `list_tables` で処理対象ファイルを確認
-3. 既存のCLがあれば `list_sources`（QCLSRC）で参照
-
-### CRUD画面作成時
+### Web画面生成のポイント
 - カラムのラベル（COLUMN_TEXT）を画面の項目名として使用
 - データ型（DATA_TYPE）に応じた入力バリデーションを設定
-- キー項目を考慮した画面設計
+- キー項目を考慮したAPI設計
 
 ### ソースコード参照時
-- ソースファイル名を指定:
+- `list_source_files` でソースファイル名を確認（名前はユーザー定義）
+- 代表的なソースファイル:
   - QCLSRC: CLプログラム
-  - QRPGSRC: RPG（固定形式）
-  - QRPGLESRC: RPG ILE（自由形式）
-  - QCBLSRC: COBOL
+  - QRPGSRC/QRPGLESRC: RPGプログラム
   - QDDSSRC: DDS（画面/ファイル定義）
-- メンバー名でソースを特定
-
-### システム情報の確認
-- `get_system_info` でOSバージョン、PTFレベル、システム状態を取得
 
 ## 注意事項
 - ライブラリ名、ファイル名は大文字で指定（自動変換されます）
-- ODBCドライバーが必要（IBM i Access ODBC Driver）
 - `execute_sql` はSELECT文のみ実行可能（セキュリティのため）
 """,
 )
@@ -1508,11 +1498,6 @@ def main():
         "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;"
         "UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1",
     )
-
-    # 開発系ツールを登録
-    from as400_mcp.development import register_development_tools
-
-    register_development_tools(mcp, get_connection)
 
     # FastMCPサーバーを起動（stdin/stdout経由でMCPプロトコル通信）
     mcp.run()
