@@ -34,7 +34,7 @@ ODBC経由でAS400のメタデータやソースコードを取得し、CL/RPG/C
 ### 前提条件
 
 - Python 3.10以上
-- [IBM i Access ODBC Driver](https://ibmi-oss-docs.readthedocs.io/en/latest/odbc/installation.html)
+- IBM i Access ODBC Driver
 - AS400/IBM i 7.3以上（推奨: 7.4以上）
   - 7.3: 基本機能が動作
   - 7.4+: `get_program_references`等の追加機能が利用可能
@@ -162,26 +162,10 @@ Claude Code:
 
 ## ODBCドライバーの設定
 
-### Windows
+ODBCドライバーの導入方法については、以下の公式ドキュメントを参照してください。
 
-IBM i Access Client Solutionsをインストールし、ODBCデータソースアドミニストレーターで設定。
+[IBM i Access ODBC Installation](https://ibmi-oss-docs.readthedocs.io/en/latest/odbc/installation.html)
 
-### Linux
-
-```bash
-# unixODBCのインストール
-sudo apt install unixodbc unixodbc-dev
-
-# IBM i Access ODBC Driverのインストール（IBM提供のパッケージ）
-# /etc/odbcinst.ini と /etc/odbc.ini を設定
-```
-
-### macOS
-
-```bash
-brew install unixodbc
-# IBM i Access Client Solutionsからドライバーをインストール
-```
 
 ## 開発
 
@@ -270,4 +254,3 @@ MIT License - Copyright (c) 2025 kozokaAI Inc.
 
 - [FastMCP](https://github.com/jlowin/fastmcp)
 - [MCP Specification](https://modelcontextprotocol.io/specification/2025-11-25)
-- [IBM i Access ODBC Installation](https://ibmi-oss-docs.readthedocs.io/en/latest/odbc/installation.html)
