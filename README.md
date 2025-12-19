@@ -62,7 +62,7 @@ pip install -e .
 
 ## Claude Code設定
 
-プロジェクトルートに `.mcp.json` ファイルを作成してください。
+実際にClaude Codeを動かすプロジェクトルートに `.mcp.json` ファイルを作成してください。
 
 接続情報（パスワード等）を含む場合は `.gitignore` に `.mcp.json` を追加することを推奨します。
 
@@ -184,6 +184,7 @@ python -m as400_mcp.server
 # ツール一覧を取得
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m as400_mcp.server
 ```
+> 上記はClaude Code経由ではなく単独でas400-mcp動作させたい場合です。
 
 #### MCP Inspector（推奨）
 
@@ -192,6 +193,7 @@ Anthropic提供のデバッグ用WebUIでGUIからツールをテストできま
 ```bash
 npx @modelcontextprotocol/inspector python -m as400_mcp.server
 ```
+> 「Claude Code無しでテストする」の .env の編集は行ってある事が前提です
 
 ブラウザが開き、ツール一覧の確認や実行テストが可能です。
 
