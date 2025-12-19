@@ -1,12 +1,12 @@
 [project]
 name = "as400-mcp"
 version = "0.1.0"
-description = "AS400/IBM i MCP Server for Claude Code - CL/RPG開発支援"
+description = "AS400/IBM i MCP Server - CL/RPG開発支援"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "MONO-X Inc."}
+    {name = "kozokaAI Inc."}
 ]
 keywords = ["mcp", "as400", "ibm-i", "cl", "rpg", "claude"]
 classifiers = [

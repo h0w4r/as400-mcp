@@ -34,7 +34,7 @@ ODBC経由でAS400のメタデータやソースコードを取得し、CL/RPG/C
 ### 前提条件
 
 - Python 3.10以上
-- IBM i Access ODBC Driver
+- [IBM i Access ODBC Driver](https://ibmi-oss-docs.readthedocs.io/en/latest/odbc/installation.html)
 - AS400/IBM i 7.3以上（推奨: 7.4以上）
   - 7.3: 基本機能が動作
   - 7.4+: `get_program_references`等の追加機能が利用可能
@@ -264,11 +264,10 @@ COLUMN_TEXT が空
 
 ## ライセンス
 
-MIT License - Copyright (c) 2025 MONO-X Inc.
+MIT License - Copyright (c) 2025 kozokaAI Inc.
 
 ## 関連リンク
 
 - [FastMCP](https://github.com/jlowin/fastmcp)
-- [MCP Specification](https://spec.modelcontextprotocol.io/)
-- [IBM i Access ODBC](https://www.ibm.com/docs/en/i/7.5?topic=odbc-i-access-driver)
-- [QSYS2 Catalog Views](https://www.ibm.com/docs/en/i/7.5?topic=views-qsys2-catalog)
+- [MCP Specification](https://modelcontextprotocol.io/specification/2025-11-25)
+- [IBM i Access ODBC Installation](https://ibmi-oss-docs.readthedocs.io/en/latest/odbc/installation.html)
