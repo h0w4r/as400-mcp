@@ -1,53 +1,53 @@
-# AS400 MCP Server
+# Servidor MCP AS400
 
-Claude Code用のAS400/IBM i開発支援MCPサーバーです。
-ODBC経由でAS400のメタデータやソースコードを取得し、CL/RPG/COBOLプログラムの開発を支援します。
+Este servidor MCP es compatible con el desarrollo de AS400/IBM i para Claude Code.
+Recupera metadatos y código fuente de AS400 mediante ODBC, lo que facilita el desarrollo de programas CL/RPG/COBOL.
 
-## 特徴
+## Características
 
-- **日本語ラベル対応**: カラムやテーブルの日本語説明（TEXT）を取得・活用
-- **ソースコード参照**: QCLSRC/QRPGSRC等からソースを取得
-- **プログラム依存関係調査**: 参照ファイル・呼び出し関係を取得
-- **システム情報取得**: OSバージョン、PTFレベル等を確認
-- **読み取り専用**: セキュリティのため全て読み取り操作のみ
+- **Compatibilidad con etiquetas japonesas**: Obtiene y utiliza descripciones de texto en japonés para columnas y tablas.
+- **Referencia de código fuente**: Obtiene código fuente de QCLSRC/QRPGSRC, etc.
+- **Inspección de dependencias del programa**: Obtiene archivos referenciados y relaciones de llamadas.
+- **Obtención de información del sistema**: Comprueba la versión del sistema operativo, el nivel de PTF, etc.
+- **Solo lectura**: Por razones de seguridad, todas las operaciones son de solo lectura.
 
-## 利用可能なツール
+## Herramientas disponibles
 
-| ツール | 説明 |
+| Herramienta | Descripción |
 |--------|------|
-| `list_libraries` | ライブラリ一覧（ラベル付き） |
-| `list_tables` | テーブル/ファイル一覧 |
-| `get_columns` | カラム一覧（日本語ラベル、型、キー情報） |
-| `list_source_files` | ソースファイル一覧（QCLSRC, QRPGSRC等） |
-| `list_sources` | ソースメンバー一覧 |
-| `get_source` | ソースコード取得 |
-| `get_data` | テーブルデータ取得 |
-| `get_table_info` | テーブル詳細情報 |
-| `get_system_info` | システム情報（OSバージョン、PTF等） |
-| `list_programs` | プログラム一覧（RPG/CL/COBOL等） |
-| `get_program_references` | プログラムの参照ファイル・呼び出し関係 |
-| `list_data_areas` | データエリア一覧（共有変数） |
-| `execute_sql` | 任意SELECT実行（読み取り専用） |
+| `list_libraries` | Lista de bibliotecas (con etiquetas) |
+| `list_tables` | Lista de tablas/archivos |
+| `get_columns` | Lista de columnas (etiquetas japonesas, tipos, información clave) |
+| `list_source_files` | Lista de archivos fuente (QCLSRC, QRPGSRC, etc.) |
+| `list_sources` | Lista de miembros fuente |
+| `get_source` | Obtener código fuente |
+| `get_data` | Obtener datos de la tabla |
+| `get_table_info` | Detalles de la tabla |
+| `get_system_info` | Información del sistema (versión del sistema operativo, PTF, etc.) |
+| `list_programs` | Lista de programas (RPG/CL/COBOL, etc.) |
+| `get_program_references` | Archivos de referencia de programa y relaciones de llamada |
+| `list_data_areas` | Lista de áreas de datos (variables compartidas) |
+| `execute_sql` | Ejecutar SELECT arbitrario (solo lectura) |
 
-## インストール
+## Instalación
 
-### 前提条件
+### Requisitos previos
 
-- Python 3.10以上
-- IBM i Access ODBC Driver
-- AS400/IBM i 7.3以上（推奨: 7.4以上）
-  - 7.3: 基本機能が動作
-  - 7.4+: `get_program_references`等の追加機能が利用可能
-- AS400/IBM iへの接続情報
+- Python 3.10 o posterior
+- Controlador ODBC de IBM i Access
+- AS400/IBM i 7.3 o posterior (se recomienda 7.4 o posterior)
+- 7.3: Las funciones básicas funcionan
+- 7.4+: Funciones adicionales como `get_program_references` están disponibles
+- Información de conexión de AS400/IBM i
 
-### インストール手順
+### Procedimiento de instalación
 
 ```bash
-# 1. リポジトリをクローン
+# 1. Clonar el repositorio
 git clone https://github.com/omni-s/as400-mcp.git
 cd as400-mcp
 
-# 2. 仮想環境を作成・有効化
+# 2. Crear y activar un entorno virtual
 python -m venv .venv
 
 # Windows
@@ -56,203 +56,201 @@ python -m venv .venv
 # Linux/macOS
 source .venv/bin/activate
 
-# 3. パッケージをインストール
+# 3. Instalar el paquete
 pip install -e .
 ```
 
-## Claude Code設定
+## Configuración de Claude Code
 
-実際にClaude Codeを動かすプロジェクトルートに `.mcp.json` ファイルを作成してください。
+Cree un archivo `.mcp.json` en la raíz del proyecto donde ejecutará Claude Code.
 
-接続情報（パスワード等）を含む場合は `.gitignore` に `.mcp.json` を追加することを推奨します。
+Si el archivo contiene información de conexión (como una contraseña), recomendamos agregar `.mcp.json` a `.gitignore`.
 
-### Windows（.mcp.json）
-
-```json
-{
-  "mcpServers": {
-    "as400": {
-      "command": "C:/path/to/as400-mcp/.venv/Scripts/python.exe",
-      "args": ["-m", "as400_mcp.server"],
-      "env": {
-        "AS400_CONNECTION_STRING": "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1"
-      }
-    }
-  }
-}
-```
-
-### Linux/macOS（.mcp.json）
+### Windows (.mcp.json)
 
 ```json
 {
-  "mcpServers": {
-    "as400": {
-      "command": "/path/to/as400-mcp/.venv/bin/python",
-      "args": ["-m", "as400_mcp.server"],
-      "env": {
-        "AS400_CONNECTION_STRING": "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1"
-      }
-    }
-  }
+"mcpServers": {
+"as400": {
+"command": "C:/ruta/a/as400-mcp/.venv/Scripts/python.exe",
+"args": ["-m", "as400_mcp.server"],
+"env": {
+"AS400_CONNECTION_STRING": "DRIVER={Controlador ODBC de IBM i Access};SYSTEM=SU_SISTEMA;UID=USUARIO;PWD=CONTRASEÑA;CCSID=1208;EXTCOLINFO=1"
+}
+}
+}
+}
+````
+
+### Linux/macOS (.mcp.json)
+
+```json
+{
+"mcpServers": {
+"as400": {
+"command": "/path/to/as400-mcp/.venv/bin/python",
+"args": ["-m", "as400_mcp.server"],
+"env": {
+"AS400_CONNECTION_STRING": "DRIVER={Controlador ODBC de IBM i Access};SYSTEM=YOUR_SYSTEM;UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1"
+}
+}
+}
 }
 ```
 
-設定後、Claude Codeを再起動して `/mcp` コマンドでas400サーバーが表示されることを確認してください。
+Después de configurar esto, reinicie Claude Code y verifique que el servidor as400 se muestre con el comando `/mcp`.
 
-### 接続文字列のオプション
+### Opciones de la cadena de conexión
 
-| オプション | 説明 |
+| Opción | Descripción |
 |-----------|------|
-| `SYSTEM` | AS400のホスト名またはIPアドレス |
-| `UID` | ユーザーID |
-| `PWD` | パスワード |
-| `CCSID=1208` | UTF-8通信（日本語対応） |
-| `EXTCOLINFO=1` | 拡張カラム情報（COLUMN_TEXT等）を取得 |
+| `SYSTEM` | Nombre de host o dirección IP del AS400 |
+| `UID` | ID de usuario |
+| `PWD` | Contraseña |
+| `CCSID=1208` | Comunicación UTF-8 (soporte japonés) |
+| `EXTCOLINFO=1` | Obtener información extendida de columnas (COLUMN_TEXT, etc.) |
 
-## 使い方
+## Uso
 
-### 基本的なワークフロー
-
-```
-ユーザー: MYLIBの受注テーブルを使ったWeb画面を作って
-
-Claude Code:
-1. get_table_info("MYLIB", "ORDER") でテーブル情報取得
-2. カラム情報（日本語ラベル付き）を確認
-3. get_data でサンプルデータを確認
-4. Web画面（React等）とAPI（FastAPI等）を生成
-```
-
-### 使用例
-
-#### テーブル構造確認
+### Flujo de trabajo básico
 
 ```
-> MYLIBのORDERテーブルの構造を教えて
+Usuario: Crear una página web usando la tabla de pedidos MYLIB.
+
+Código Claude:
+1. Obtener información de la tabla con get_table_info("MYLIB", "ORDER")
+2. Verificar la información de las columnas (con etiquetas en japonés)
+3. Verificar datos de ejemplo con get_data
+4. Generar una página web (React, etc.) y una API (FastAPI, etc.)
 ```
 
-#### 既存ソース参照
+### Ejemplo de uso
+
+#### Verificar la estructura de la tabla
 
 ```
-> MYLIBのソースファイル一覧を見せて
-> MYLIB/QRPGSRC内のORDMNTソースを見せて
-```
+> ¿Cuál es la estructura de la tabla ORDER en MYLIB? ```
 
-#### プログラム調査
+#### Referencia al código fuente existente
 
 ```
-> MYLIBにあるRPGプログラムの一覧を見せて
-> ORDER001プログラムが参照しているファイルを教えて
+> Muéstrame una lista de archivos fuente en MYLIB
+> Muéstrame el código fuente de ORDMNT en MYLIB/QRPGSRC
 ```
 
-#### Web画面生成
+#### Investigación del programa
 
 ```
-> MYLIBのCUSTOMERテーブルでWebの一覧・詳細画面を作って
-  - 日本語ラベルを画面項目名に
-  - 検索機能付き
+> Muéstrame una lista de programas RPG en MYLIB
+> Indica los archivos referenciados por el programa ORDER001
 ```
 
-#### システム情報確認
+#### Generación de páginas web
 
 ```
-> AS400のバージョンを教えて
+> Crea una lista web y una pantalla de detalles usando la tabla CUSTOMER en MYLIB
+- Usa etiquetas japonesas como nombres de campo de pantalla
+- Con función de búsqueda
 ```
 
-## ODBCドライバーの設定
+#### Confirmación de la información del sistema
 
-ODBCドライバーの導入方法については、以下の公式ドキュメントを参照してください。
+```
+> Indica la versión de AS400
+```
 
-[IBM i Access ODBC Installation](https://ibmi-oss-docs.readthedocs.io/en/latest/odbc/installation.html)
+## Configuración del controlador ODBC
 
+Para obtener información sobre la instalación del controlador ODBC, consulte la documentación oficial a continuación.
 
-## 開発
+[Instalación de ODBC en IBM i Access](https://ibmi-oss-docs.readthedocs.io/en/latest/odbc/installation.html)
 
-### Claude Code無しでテストする
+## Desarrollo
 
-MCPサーバーはClaude Code無しでも動作確認できます。
+### Pruebas sin Claude Code
+
+Puede probar el servidor MCP sin Claude Code.
 
 ```bash
-# .env.exampleをコピーして接続情報を設定
+# Copiar .env.example y establecer la información de conexión
 cp .env.example .env
-# .envを編集して接続情報を入力
+# Editar .env e introducir la información de conexión
 
-# 直接起動（stdinにJSON-RPCを入力）
+# Iniciar directamente (introducir JSON-RPC en la entrada estándar)
 python -m as400_mcp.server
 
-# ツール一覧を取得
+# Obtener una lista de herramientas
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m as400_mcp.server
 ```
-> 上記はClaude Code経由ではなく単独でas400-mcp動作させたい場合です。
+> Lo anterior es para ejecutar as400-mcp de forma independiente, sin Claude Code.
 
-#### MCP Inspector（推奨）
+#### Inspector MCP (Recomendado)
 
-Anthropic提供のデバッグ用WebUIでGUIからツールをテストできます。
+Puede probar herramientas desde una interfaz gráfica de usuario (GUI) utilizando la interfaz web de depuración proporcionada por Anthropic.
 
 ```bash
 npx @modelcontextprotocol/inspector python -m as400_mcp.server
 ```
-> 「Claude Code無しでテストする」の .env の編集は行ってある事が前提です
+> Se asume que ya ha editado el archivo .env como se describe en "Pruebas sin Claude Code".
 
-ブラウザが開き、ツール一覧の確認や実行テストが可能です。
+Se abrirá un navegador que le permitirá ver una lista de herramientas y ejecutar pruebas.
 
-### ユニットテスト
+### Prueba unitaria
 
 ```bash
-# 開発用依存パッケージをインストール
+# Instalar dependencias de desarrollo
 pip install -e ".[dev]"
 
-# テスト実行
+# Ejecutar pruebas
 pytest tests/ -v
 ```
 
-### リント
+### Lint
 
 ```bash
 ruff check .
 ruff format .
 ```
 
-## トラブルシューティング
+## Solución de problemas
 
-### 接続エラー
+### Error de conexión
 
 ```
-[HY000] [IBM][System i Access ODBC Driver]Communication link failure
+[HY000] [IBM][Controlador ODBC de System i Access]Fallo de enlace de comunicación
 ```
 
-→ SYSTEM、UID、PWDを確認。ファイアウォールでポート446/449/8470等が開いているか確認。
+→ Compruebe SYSTEM, UID y PWD. Compruebe que los puertos 446, 449, 8470, etc., estén abiertos en el firewall.
 
-### 文字化け
+### Caracteres ilegibles
 
 ```
 UnicodeDecodeError
 ```
 
-→ 接続文字列に`CCSID=1208`を追加（UTF-8通信）。
+→ Añada `CCSID=1208` a la cadena de conexión (comunicación UTF-8).
 
-### 日本語ラベルが取得できない
-
-```
-COLUMN_TEXT が空
-```
-
-→ 接続文字列に`EXTCOLINFO=1`を追加。
-
-### 権限エラー
+### No se pueden recuperar las etiquetas japonesas
 
 ```
-[42501] User not authorized to object
+COLUMN_TEXT está vacío
 ```
 
-→ AS400側でユーザーにQSYS2カタログビューへのアクセス権限を付与。
+→ Añada `EXTCOLINFO=1` a la cadena de conexión.
 
-## ライセンス
+### Error de autorización
 
-MIT License - Copyright (c) 2025 kozokaAI Inc.
+```
+[42501] Usuario no autorizado para objetar
+```
 
-## 関連リンク
+→ Otorgar al usuario acceso a la vista del catálogo de QSYS2 en el lado AS400.
+
+## Licencia
+
+Licencia MIT - Copyright (c) 2025 kozokaAI Inc.
+
+## Enlaces relacionados
 
 - [FastMCP](https://github.com/jlowin/fastmcp)
-- [MCP Specification](https://modelcontextprotocol.io/specification/2025-11-25)
+- [Especificación MCP](https://modelcontextprotocol.io/specification/2025-11-25)
