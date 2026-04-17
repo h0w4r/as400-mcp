@@ -138,6 +138,39 @@ Despues de configurar esto, reinicia Claude Code y verifica con el comando `/mcp
 | `CCSID=1208` | Comunicacion en UTF-8 (compatible con japones) |
 | `EXTCOLINFO=1` | Obtiene informacion extendida de columnas (como `COLUMN_TEXT`) |
 
+### Variables de entorno adicionales de esta version
+
+Estas variables aplican a los ajustes agregados en este fork para mejorar diagnostico, logging y control operativo del servidor MCP.
+
+| Variable | Descripcion |
+|-----------|------|
+| `AS400_MCP_LOG` | Ruta del archivo de log. Si no se define, se crea `as400-mcp.log` junto a `src/as400_mcp/server.py`. |
+| `AS400_MCP_LOG_LEVEL` | Nivel de logging: `DEBUG`, `INFO`, `WARNING` o `ERROR`. |
+| `AS400_MCP_LOG_STDERR` | Si vale `1`, tambien emite mensajes `WARNING` o superiores a `stderr`. |
+| `AS400_MCP_LOG_SQL` | Si vale `1`, registra una vista previa truncada del SQL ejecutado. |
+| `AS400_MCP_SQL_TIMEOUT` | Timeout de ejecucion SQL en segundos, aplicado al cursor ODBC. |
+| `AS400_MCP_CONNECT_TIMEOUT` | Timeout de conexion ODBC en segundos. |
+
+### Ejemplo ampliado de configuracion
+
+```json
+{
+  "mcpServers": {
+    "as400": {
+      "command": "C:/path/to/as400-mcp/.venv/Scripts/python.exe",
+      "args": ["-m", "as400_mcp.server"],
+      "env": {
+        "AS400_CONNECTION_STRING": "DRIVER={IBM i Access ODBC Driver};SYSTEM=YOUR_SYSTEM;UID=USER;PWD=PASS;CCSID=1208;EXTCOLINFO=1",
+        "AS400_MCP_LOG": "C:/temp/as400-mcp.log",
+        "AS400_MCP_LOG_LEVEL": "DEBUG",
+        "AS400_MCP_SQL_TIMEOUT": "30",
+        "AS400_MCP_CONNECT_TIMEOUT": "15"
+      }
+    }
+  }
+}
+```
+
 ## Uso
 
 ### Flujo de trabajo basico
