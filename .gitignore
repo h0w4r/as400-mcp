@@ -65,3 +65,4 @@ connection_string.txt
 CLAUDE.md
 .claude/
 .mcp.json
+src/as400_mcp/server - copia.py
